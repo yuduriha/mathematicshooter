@@ -12,6 +12,7 @@ namespace mkg.mtsh {
 		 * シーン識別子
 		 */
 		static readonly SCENE_KEY = {
+			PRELOAD: "scene_preload",
 			GAME: "scene_game",
 		};
 

@@ -22,6 +22,7 @@ namespace mkg.mtsh {
 				}
 			},
 			scene: [
+				PreloadScene,
 				GameScene,
 			],
 			fps: {
@@ -29,5 +30,6 @@ namespace mkg.mtsh {
 			}
 		};
 		let game = new Phaser.Game(config);
+		GameManager.create(game);
 	}
 }

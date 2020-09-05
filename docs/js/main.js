@@ -14,8 +14,8 @@ var __extends = (this && this.__extends) || (function () {
 })();
 var mkg;
 (function (mkg) {
-    var bihw;
-    (function (bihw) {
+    var mtsh;
+    (function (mtsh) {
         var CONST = (function () {
             function CONST() {
             }
@@ -24,6 +24,7 @@ var mkg;
                 height: 640,
             };
             CONST.SCENE_KEY = {
+                PRELOAD: "scene_preload",
                 GAME: "scene_game",
             };
             CONST.RESOURCE_KEY = {
@@ -36,13 +37,13 @@ var mkg;
             };
             return CONST;
         }());
-        bihw.CONST = CONST;
-    })(bihw = mkg.bihw || (mkg.bihw = {}));
+        mtsh.CONST = CONST;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
 })(mkg || (mkg = {}));
 var mkg;
 (function (mkg) {
-    var bihw;
-    (function (bihw) {
+    var mtsh;
+    (function (mtsh) {
         window.onload = function () {
             run();
         };
@@ -50,8 +51,8 @@ var mkg;
             var config = {
                 type: Phaser.CANVAS,
                 parent: 'phaser-canvas',
-                width: bihw.CONST.SCREEN.width,
-                height: bihw.CONST.SCREEN.height,
+                width: mtsh.CONST.SCREEN.width,
+                height: mtsh.CONST.SCREEN.height,
                 scale: {
                     mode: Phaser.Scale.FIT,
                     autoCenter: Phaser.Scale.CENTER_BOTH
@@ -63,24 +64,71 @@ var mkg;
                     }
                 },
                 scene: [
-                    bihw.GameScene,
+                    mtsh.PreloadScene,
+                    mtsh.GameScene,
                 ],
                 fps: {
                     target: 30
                 }
             };
             var game = new Phaser.Game(config);
+            mtsh.GameManager.create(game);
         }
-    })(bihw = mkg.bihw || (mkg.bihw = {}));
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
 })(mkg || (mkg = {}));
 var mkg;
 (function (mkg) {
-    var bihw;
-    (function (bihw) {
+    var mtsh;
+    (function (mtsh) {
+        var GameManager = (function () {
+            function GameManager(game) {
+                this._game = game;
+            }
+            GameManager.create = function (game) {
+                if (!GameManager.instance) {
+                    GameManager.instance = new GameManager(game);
+                }
+            };
+            GameManager.getInstance = function () {
+                return GameManager.instance;
+            };
+            Object.defineProperty(GameManager.prototype, "game", {
+                get: function () {
+                    return this._game;
+                },
+                enumerable: false,
+                configurable: true
+            });
+            GameManager.prototype.setConfig = function (scene) {
+                this._config = scene.cache.json.get(mtsh.CONST.RESOURCE_KEY.JSON.CONFIG);
+                return this._config;
+            };
+            Object.defineProperty(GameManager.prototype, "config", {
+                get: function () { return this._config; },
+                enumerable: false,
+                configurable: true
+            });
+            ;
+            Object.defineProperty(GameManager.prototype, "gameScene", {
+                get: function () {
+                    return this._game.scene.getScene(mtsh.CONST.SCENE_KEY.GAME);
+                },
+                enumerable: false,
+                configurable: true
+            });
+            return GameManager;
+        }());
+        mtsh.GameManager = GameManager;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
         var GameScene = (function (_super) {
             __extends(GameScene, _super);
             function GameScene() {
-                return _super.call(this, bihw.CONST.SCENE_KEY.GAME) || this;
+                return _super.call(this, mtsh.CONST.SCENE_KEY.GAME) || this;
             }
             GameScene.prototype.preload = function () {
             };
@@ -91,6 +139,30 @@ var mkg;
             };
             return GameScene;
         }(Phaser.Scene));
-        bihw.GameScene = GameScene;
-    })(bihw = mkg.bihw || (mkg.bihw = {}));
+        mtsh.GameScene = GameScene;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
+        var PreloadScene = (function (_super) {
+            __extends(PreloadScene, _super);
+            function PreloadScene() {
+                return _super.call(this, mtsh.CONST.SCENE_KEY.PRELOAD) || this;
+            }
+            PreloadScene.prototype.preload = function () {
+                this.load.json(mtsh.CONST.RESOURCE_KEY.JSON.CONFIG, "assets/json/config.json");
+            };
+            PreloadScene.prototype.create = function () {
+                mtsh.GameManager.getInstance().setConfig(this);
+                console.log("bih version : " + mtsh.GameManager.getInstance().config.version);
+            };
+            PreloadScene.prototype.update = function () {
+                this.scene.start(mtsh.CONST.SCENE_KEY.GAME);
+            };
+            return PreloadScene;
+        }(Phaser.Scene));
+        mtsh.PreloadScene = PreloadScene;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
 })(mkg || (mkg = {}));
