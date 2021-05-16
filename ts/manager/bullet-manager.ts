@@ -67,6 +67,7 @@ namespace mkg.mtsh {
 					return false;
 				}
 
+				bullet.update();
 				return true;
 			});
 		}

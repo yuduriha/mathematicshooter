@@ -19,6 +19,22 @@ var mkg;
         var CONST = (function () {
             function CONST() {
             }
+            CONST.SCENE_KEY = {
+                PRELOAD: "scene_preload",
+                GAME: "scene_game",
+            };
+            CONST.RESOURCE_KEY = {
+                JSON: {
+                    CONFIG: "json_config",
+                },
+                IMG: {
+                    PLAYER: "img_player",
+                    ENEMY: "img_enemy",
+                    BULET000: "img_bullet_000",
+                    BULET001: "img_bullet_001",
+                    BG: "img_bg",
+                }
+            };
             CONST.SCREEN = {
                 width: 600,
                 height: 800,
@@ -54,26 +70,21 @@ var mkg;
                     INTERVAL: 500,
                     SPEED: -250,
                     SHOT_OFFSET: [
-                        { x: 0, y: -20 }, { x: 0, y: -10 },
-                        { x: 15, y: -10 }, { x: 15, y: 0 },
-                        { x: -15, y: -10 }, { x: -15, y: 0 },
+                        { x: 0, y: -50 }, { x: 0, y: -20 },
+                        { x: 25, y: -25 }, { x: 25, y: 0 },
+                        { x: -25, y: -25 }, { x: -25, y: 0 },
                     ]
                 }
             };
-            CONST.SCENE_KEY = {
-                PRELOAD: "scene_preload",
-                GAME: "scene_game",
-            };
-            CONST.RESOURCE_KEY = {
-                JSON: {
-                    CONFIG: "json_config",
+            CONST.BG = {
+                TILE_SIZE: {
+                    w: 400,
+                    h: 400
                 },
-                IMG: {
-                    PLAYER: "img_player",
-                    ENEMY: "img_enemy",
-                    BULET000: "img_bullet_000",
-                    BULET001: "img_bullet_001",
-                }
+                SPEED: 2
+            };
+            CONST.BULLET = {
+                DEFO_ANGLE: 90
             };
             return CONST;
         }());
@@ -110,7 +121,7 @@ var mkg;
                 physics: {
                     default: 'arcade',
                     arcade: {
-                        debug: true
+                        debug: false
                     }
                 },
                 scene: [
@@ -241,6 +252,7 @@ var mkg;
                         bullet.destroy(true);
                         return false;
                     }
+                    bullet.update();
                     return true;
                 });
             };
@@ -324,10 +336,12 @@ var mkg;
                 mtsh.BulletManager.getInstance().destroyBulletAll();
             };
             ObjectManager.prototype.createObjects = function (scene) {
+                mtsh.Bg.getInstance().create(scene, mtsh.CONST.RESOURCE_KEY.IMG.BG);
                 this._player = new mtsh.Player(scene, mtsh.CONST.PLAYER.INIT_POS.x, mtsh.CONST.PLAYER.INIT_POS.y, mtsh.CONST.RESOURCE_KEY.IMG.PLAYER);
                 this.createEnemy(scene);
             };
             ObjectManager.prototype.update = function (scene) {
+                mtsh.Bg.getInstance().update();
                 this._player.update(scene);
                 this.enemyList.forEach(function (e) {
                     e.update(scene);
@@ -373,6 +387,44 @@ var mkg;
 (function (mkg) {
     var mtsh;
     (function (mtsh) {
+        var Bg = (function () {
+            function Bg() {
+                this.bgList = [];
+            }
+            Bg.getInstance = function () {
+                if (!Bg.instance) {
+                    Bg.instance = new Bg();
+                }
+                return Bg.instance;
+            };
+            Bg.prototype.create = function (scene, img) {
+                var col = Math.ceil(mtsh.CONST.GAME_AREA.width / mtsh.CONST.BG.TILE_SIZE.w);
+                var row = Math.ceil(mtsh.CONST.GAME_AREA.height / mtsh.CONST.BG.TILE_SIZE.h);
+                for (var y = -1; y < row; ++y) {
+                    for (var x = 0; x < col; ++x) {
+                        var image = scene.add.image(mtsh.CONST.GAME_AREA.x + x * mtsh.CONST.BG.TILE_SIZE.w, mtsh.CONST.GAME_AREA.y + y * mtsh.CONST.BG.TILE_SIZE.h, img);
+                        image.setOrigin(0, 0);
+                        this.bgList.push(image);
+                    }
+                }
+            };
+            Bg.prototype.update = function () {
+                this.bgList.forEach(function (bg) {
+                    bg.y += mtsh.CONST.BG.SPEED;
+                    if (bg.y > mtsh.CONST.GAME_AREA.height) {
+                        bg.y -= mtsh.CONST.GAME_AREA.height + mtsh.CONST.BG.TILE_SIZE.h;
+                    }
+                });
+            };
+            return Bg;
+        }());
+        mtsh.Bg = Bg;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
         var Bullet = (function (_super) {
             __extends(Bullet, _super);
             function Bullet(scene, texture, hitCallback, frame) {
@@ -391,8 +443,10 @@ var mkg;
                 this.setVisible(true);
                 this.setPosition(x, y);
                 this.setVelocity(vx, vy);
+                this.velo = new Phaser.Math.Vector2(vx, vy);
             };
-            Bullet.prototype.update = function (scene) {
+            Bullet.prototype.update = function () {
+                this.angle = Phaser.Math.RadToDeg(this.velo.angle()) + mtsh.CONST.BULLET.DEFO_ANGLE;
             };
             Bullet.prototype.isDestroyOutside = function () {
                 return true;
@@ -449,7 +503,6 @@ var mkg;
                 _this.setOrigin(0.5);
                 var offset = _this.width * (0.5 - mtsh.CONST.PLAYER.HIT_DIAMETER);
                 _this.setCircle(_this.width * mtsh.CONST.PLAYER.HIT_DIAMETER, offset, offset);
-                _this.angle = -90;
                 _this.startShot(scene);
                 return _this;
             }
@@ -537,14 +590,15 @@ var mkg;
                 return _super.call(this, mtsh.CONST.SCENE_KEY.GAME) || this;
             }
             GameScene.prototype.preload = function () {
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/player.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/enemy.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/bullet000.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/bullet001.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/character_takenoko.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/character_kinoko.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/takenoko_bamboo_shoot.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/kinoko.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BG, "assets/img/pattern_shibafu.png");
             };
             GameScene.prototype.create = function () {
                 mtsh.ObjectManager.getInstance().createObjects(this);
-                this.debugText = this.add.text(10, 10, "", { color: '#00ff00' });
+                this.debugText = this.add.text(10, 10, "", { color: '#333300' });
             };
             GameScene.prototype.update = function () {
                 mtsh.ObjectManager.getInstance().update(this);

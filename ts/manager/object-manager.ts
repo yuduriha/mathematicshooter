@@ -32,6 +32,9 @@ namespace mkg.mtsh {
 		}
 
 		public createObjects(scene: Phaser.Scene) {
+			// 背景作成
+			Bg.getInstance().create(scene, CONST.RESOURCE_KEY.IMG.BG);
+
 			// 自機作成
 			this._player = new Player(scene, CONST.PLAYER.INIT_POS.x, CONST.PLAYER.INIT_POS.y, CONST.RESOURCE_KEY.IMG.PLAYER);
 			// 敵機作成
@@ -39,6 +42,8 @@ namespace mkg.mtsh {
 		}
 
 		public update(scene: Phaser.Scene) {
+			Bg.getInstance().update();
+
 			this._player.update(scene);
 
 			this.enemyList.forEach((e) => {

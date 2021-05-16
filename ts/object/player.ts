@@ -10,8 +10,6 @@ namespace mkg.mtsh {
 			let offset = this.width * (0.5 - CONST.PLAYER.HIT_DIAMETER);
 			this.setCircle(this.width * CONST.PLAYER.HIT_DIAMETER, offset, offset);
 
-			this.angle = -90;
-
 			this.startShot(scene);
 		}
 

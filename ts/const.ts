@@ -1,6 +1,30 @@
 namespace mkg.mtsh {
 	export class CONST {
 		/**
+		 * シーン識別子
+		 */
+		static readonly SCENE_KEY = {
+			PRELOAD: "scene_preload",
+			GAME: "scene_game",
+		};
+
+		/**
+		 * リソース識別子
+		 */
+		static readonly RESOURCE_KEY = {
+			JSON: {
+				CONFIG: "json_config",
+			},
+			IMG: {
+				PLAYER:   "img_player",
+				ENEMY:    "img_enemy",
+				BULET000: "img_bullet_000",
+				BULET001: "img_bullet_001",
+				BG:       "img_bg",
+			}
+		};
+
+		/**
 		 * 画面サイズ
 		 */
 		static readonly SCREEN = {
@@ -53,34 +77,23 @@ namespace mkg.mtsh {
 				INTERVAL: 500,
 				SPEED: -250,
 				SHOT_OFFSET: [
-					{x: 0, y: -20}, {x: 0, y: -10},
-					{x: 15, y: -10}, {x: 15, y: 0},
-					{x: -15, y: -10}, {x: -15, y: 0},
+					{x: 0, y: -50}, {x: 0, y: -20},
+					{x: 25, y: -25}, {x: 25, y: 0},
+					{x: -25, y: -25}, {x: -25, y: 0},
 				]
 			}
 		};
 
-		/**
-		 * シーン識別子
-		 */
-		static readonly SCENE_KEY = {
-			PRELOAD: "scene_preload",
-			GAME: "scene_game",
+		static readonly BG = {
+			TILE_SIZE: {
+				w: 400,
+				h: 400
+			},
+			SPEED: 2
 		};
 
-		/**
-		 * リソース識別子
-		 */
-		static readonly RESOURCE_KEY = {
-			JSON: {
-				CONFIG: "json_config",
-			},
-			IMG: {
-				PLAYER:   "img_player",
-				ENEMY:    "img_enemy",
-				BULET000: "img_bullet_000",
-				BULET001: "img_bullet_001",
-			}
+		static readonly BULLET = {
+			DEFO_ANGLE: 90
 		};
 	}
 }
