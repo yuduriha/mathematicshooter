@@ -78,10 +78,25 @@ namespace mkg.mtsh {
 			let scene = GameManager.getInstance().gameScene;
 			
 			// 自機との当たり判定
-			scene.physics.add.overlap(bullet,this.player, (b: Phaser.GameObjects.GameObject, p: Phaser.GameObjects.GameObject) => {
+			scene.physics.add.overlap(bullet, this.player, (b: Phaser.GameObjects.GameObject, p: Phaser.GameObjects.GameObject) => {
 				(<Bullet>b).hit();
 				this.hitPlayer(<Player>p);
 			}, undefined, scene);
+		}
+
+		/**
+		 * 自機の弾の当たり判定
+		 */
+		public setCollderPlayerBullet(bullet: Bullet) {
+			let scene = GameManager.getInstance().gameScene;
+			
+			this.enemyList.forEach((enemy) => {
+				scene.physics.add.overlap(bullet, enemy, (b: Phaser.GameObjects.GameObject, e: Phaser.GameObjects.GameObject) => {
+					(<Bullet>b).hit();
+					(<Enemy>e).hit();
+					
+				}, undefined, scene);
+			});
 		}
 
 		/**

@@ -7,7 +7,8 @@ namespace mkg.mtsh {
 		preload() {
 			this.load.image(CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/player.png");
 			this.load.image(CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/enemy.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.BULET, "assets/img/bullet000.png");
+			this.load.image(CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/bullet000.png");
+			this.load.image(CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/bullet001.png");
 		}
 		create() {
 			ObjectManager.getInstance().createObjects(this);

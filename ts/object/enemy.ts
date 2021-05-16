@@ -17,10 +17,14 @@ namespace mkg.mtsh {
 
 			if(this.frameCounter % 30 === 0) {
 				let velo = util.newVector2(200, this.frameCounter * 0.5);
-				BulletManager.getInstance().use(this.x, this.y, velo.x, velo.y, (b: Bullet) => {
+				BulletManager.getInstance().use(this.x, this.y, velo.x, velo.y, CONST.RESOURCE_KEY.IMG.BULET001, (b: Bullet) => {
 					ObjectManager.getInstance().setCollderBullet(b);
 				});
 			}
+		}
+
+		public hit() {
+			
 		}
 	}
 }

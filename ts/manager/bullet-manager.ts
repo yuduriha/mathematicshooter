@@ -24,8 +24,8 @@ namespace mkg.mtsh {
 			this.bulletList = [];
 		}
 
-		private createBullet(scene: Phaser.Scene): Bullet{
-			let bullet = new Bullet(scene, CONST.RESOURCE_KEY.IMG.BULET,() => {
+		private createBullet(scene: Phaser.Scene, img: string): Bullet{
+			let bullet = new Bullet(scene, img, () => {
 				bullet.destroy(true);
 				// オブジェクトプールうまく行ったらここいらない
 				this.bulletList = this.bulletList.filter((b: Bullet) => {
@@ -40,12 +40,15 @@ namespace mkg.mtsh {
 		 * 弾使用
 		 * @param x 
 		 * @param y 
+		 * @param vx 
+		 * @param vy 
+		 * @param img
 		 * @param angle 発射角度
 		 * @param bulletData 
 		 * @param setCollider 新規に作成した際に設定する当たり判定
 		 */
-		public use(x: number, y: number, vx: number, vy:number, setCollider:(bullet: Bullet) => void) {
-			let bullet = this.createBullet(GameManager.getInstance().gameScene);
+		public use(x: number, y: number, vx: number, vy:number, img: string, setCollider:(bullet: Bullet) => void) {
+			let bullet = this.createBullet(GameManager.getInstance().gameScene, img);
 			setCollider(bullet);
 			
 			bullet.use(x, y, vx, vy);

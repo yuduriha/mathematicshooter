@@ -49,7 +49,16 @@ var mkg;
                     x: CONST.SCREEN_CENTER.x,
                     y: 700
                 },
-                HIT_DIAMETER: 0.25
+                HIT_DIAMETER: 0.25,
+                BULLET: {
+                    INTERVAL: 500,
+                    SPEED: -250,
+                    SHOT_OFFSET: [
+                        { x: 0, y: -20 }, { x: 0, y: -10 },
+                        { x: 15, y: -10 }, { x: 15, y: 0 },
+                        { x: -15, y: -10 }, { x: -15, y: 0 },
+                    ]
+                }
             };
             CONST.SCENE_KEY = {
                 PRELOAD: "scene_preload",
@@ -62,7 +71,8 @@ var mkg;
                 IMG: {
                     PLAYER: "img_player",
                     ENEMY: "img_enemy",
-                    BULET: "img_bullet",
+                    BULET000: "img_bullet_000",
+                    BULET001: "img_bullet_001",
                 }
             };
             return CONST;
@@ -206,9 +216,9 @@ var mkg;
                 });
                 this.bulletList = [];
             };
-            BulletManager.prototype.createBullet = function (scene) {
+            BulletManager.prototype.createBullet = function (scene, img) {
                 var _this = this;
-                var bullet = new mtsh.Bullet(scene, mtsh.CONST.RESOURCE_KEY.IMG.BULET, function () {
+                var bullet = new mtsh.Bullet(scene, img, function () {
                     bullet.destroy(true);
                     _this.bulletList = _this.bulletList.filter(function (b) {
                         return b != bullet;
@@ -217,8 +227,8 @@ var mkg;
                 this.bulletList.push(bullet);
                 return bullet;
             };
-            BulletManager.prototype.use = function (x, y, vx, vy, setCollider) {
-                var bullet = this.createBullet(mtsh.GameManager.getInstance().gameScene);
+            BulletManager.prototype.use = function (x, y, vx, vy, img, setCollider) {
+                var bullet = this.createBullet(mtsh.GameManager.getInstance().gameScene, img);
                 setCollider(bullet);
                 bullet.use(x, y, vx, vy);
             };
@@ -341,6 +351,15 @@ var mkg;
                     _this.hitPlayer(p);
                 }, undefined, scene);
             };
+            ObjectManager.prototype.setCollderPlayerBullet = function (bullet) {
+                var scene = mtsh.GameManager.getInstance().gameScene;
+                this.enemyList.forEach(function (enemy) {
+                    scene.physics.add.overlap(bullet, enemy, function (b, e) {
+                        b.hit();
+                        e.hit();
+                    }, undefined, scene);
+                });
+            };
             ObjectManager.prototype.colliderPlayerToEnemy = function (p) {
             };
             ObjectManager.prototype.hitPlayer = function (p) {
@@ -405,10 +424,12 @@ var mkg;
                 ++this.frameCounter;
                 if (this.frameCounter % 30 === 0) {
                     var velo = mkg.util.newVector2(200, this.frameCounter * 0.5);
-                    mtsh.BulletManager.getInstance().use(this.x, this.y, velo.x, velo.y, function (b) {
+                    mtsh.BulletManager.getInstance().use(this.x, this.y, velo.x, velo.y, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
                         mtsh.ObjectManager.getInstance().setCollderBullet(b);
                     });
                 }
+            };
+            Enemy.prototype.hit = function () {
             };
             return Enemy;
         }(Phaser.Physics.Arcade.Image));
@@ -429,6 +450,7 @@ var mkg;
                 var offset = _this.width * (0.5 - mtsh.CONST.PLAYER.HIT_DIAMETER);
                 _this.setCircle(_this.width * mtsh.CONST.PLAYER.HIT_DIAMETER, offset, offset);
                 _this.angle = -90;
+                _this.startShot(scene);
                 return _this;
             }
             Player.prototype.update = function (scene) {
@@ -457,6 +479,13 @@ var mkg;
                 }
                 var angle = Phaser.Math.RadToDeg(Math.atan2(targetVec.y, targetVec.x));
                 this.updateVelo(angle);
+            };
+            Player.prototype.updateVelo = function (angle) {
+                var velo = mkg.util.polarCoord(0, 0, mtsh.CONST.PLAYER.SPEED, angle);
+                this.setVelocity(velo.x, velo.y);
+                this.outside();
+            };
+            Player.prototype.outside = function () {
                 if (this.x < mtsh.CONST.GAME_AREA_RECT.left) {
                     this.x = mtsh.CONST.GAME_AREA_RECT.left;
                 }
@@ -470,9 +499,28 @@ var mkg;
                     this.y = mtsh.CONST.GAME_AREA_RECT.bottom;
                 }
             };
-            Player.prototype.updateVelo = function (angle) {
-                var velo = mkg.util.polarCoord(0, 0, mtsh.CONST.PLAYER.SPEED, angle);
-                this.setVelocity(velo.x, velo.y);
+            Player.prototype.startShot = function (scene) {
+                var _this = this;
+                this.shotTimer = scene.time.addEvent({
+                    loop: true,
+                    delay: mtsh.CONST.PLAYER.BULLET.INTERVAL,
+                    callback: function () {
+                        _this.shot();
+                    }
+                });
+            };
+            Player.prototype.stopShot = function () {
+                if (this.shotTimer) {
+                    this.shotTimer.destroy();
+                }
+            };
+            Player.prototype.shot = function () {
+                var _this = this;
+                mtsh.CONST.PLAYER.BULLET.SHOT_OFFSET.forEach(function (pos) {
+                    mtsh.BulletManager.getInstance().use(_this.x + pos.x, _this.y + pos.y, 0, mtsh.CONST.PLAYER.BULLET.SPEED, mtsh.CONST.RESOURCE_KEY.IMG.BULET000, function (b) {
+                        mtsh.ObjectManager.getInstance().setCollderPlayerBullet(b);
+                    });
+                });
             };
             return Player;
         }(Phaser.Physics.Arcade.Image));
@@ -491,7 +539,8 @@ var mkg;
             GameScene.prototype.preload = function () {
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/player.png");
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/enemy.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET, "assets/img/bullet000.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/bullet000.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/bullet001.png");
             };
             GameScene.prototype.create = function () {
                 mtsh.ObjectManager.getInstance().createObjects(this);

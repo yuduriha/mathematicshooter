@@ -1,5 +1,6 @@
 namespace mkg.mtsh {
 	export class Player extends Phaser.Physics.Arcade.Image {
+		private shotTimer!: Phaser.Time.TimerEvent;
 		constructor(scene: Phaser.Scene, x: number, y: number, texture: string, frame?: string | integer) {
 			super(scene, x, y, texture, frame);
 			scene.add.existing(this);
@@ -10,6 +11,8 @@ namespace mkg.mtsh {
 			this.setCircle(this.width * CONST.PLAYER.HIT_DIAMETER, offset, offset);
 
 			this.angle = -90;
+
+			this.startShot(scene);
 		}
 
 		public update(scene: Phaser.Scene) {
@@ -66,6 +69,30 @@ namespace mkg.mtsh {
 			} else if(this.y > CONST.GAME_AREA_RECT.bottom) {
 				this.y = CONST.GAME_AREA_RECT.bottom;
 			}
+		}
+
+		private startShot(scene: Phaser.Scene) {
+			this.shotTimer = scene.time.addEvent({
+				loop: true,
+				delay: CONST.PLAYER.BULLET.INTERVAL,
+				callback: () => {
+					this.shot();
+				}
+			});
+		}
+
+		private stopShot() {
+			if(this.shotTimer) {
+				this.shotTimer.destroy();
+			}
+		}
+
+		private shot() {
+			CONST.PLAYER.BULLET.SHOT_OFFSET.forEach((pos) => {
+				BulletManager.getInstance().use(this.x + pos.x, this.y + pos.y, 0, CONST.PLAYER.BULLET.SPEED, CONST.RESOURCE_KEY.IMG.BULET000, (b: Bullet) => {
+					ObjectManager.getInstance().setCollderPlayerBullet(b);
+				});
+			});
 		}
 	}
 }

@@ -48,7 +48,16 @@ namespace mkg.mtsh {
 				x: CONST.SCREEN_CENTER.x,
 				y: 700
 			},
-			HIT_DIAMETER: 0.25 // 円当たり判定の直径の割合(直径と同じ場合1、外接する場合は0.5)
+			HIT_DIAMETER: 0.25, // 円当たり判定の直径の割合(直径と同じ場合1、外接する場合は0.5)
+			BULLET: {
+				INTERVAL: 500,
+				SPEED: -250,
+				SHOT_OFFSET: [
+					{x: 0, y: -20}, {x: 0, y: -10},
+					{x: 15, y: -10}, {x: 15, y: 0},
+					{x: -15, y: -10}, {x: -15, y: 0},
+				]
+			}
 		};
 
 		/**
@@ -67,9 +76,10 @@ namespace mkg.mtsh {
 				CONFIG: "json_config",
 			},
 			IMG: {
-				PLAYER: "img_player",
-				ENEMY:  "img_enemy",
-				BULET:  "img_bullet",
+				PLAYER:   "img_player",
+				ENEMY:    "img_enemy",
+				BULET000: "img_bullet_000",
+				BULET001: "img_bullet_001",
 			}
 		};
 	}
