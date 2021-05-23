@@ -39,7 +39,7 @@ namespace mkg.mtsh {
 			x: CONST.SCREEN.width / 2,
 			y: CONST.SCREEN.height / 2,
 		};
-		
+
 		/**
 		 * ゲームエリアサイズ
 		 */

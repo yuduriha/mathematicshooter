@@ -38,19 +38,19 @@ namespace mkg.mtsh {
 
 		/**
 		 * 弾使用
-		 * @param x 
-		 * @param y 
-		 * @param vx 
-		 * @param vy 
+		 * @param x
+		 * @param y
+		 * @param vx
+		 * @param vy
 		 * @param img
 		 * @param angle 発射角度
-		 * @param bulletData 
+		 * @param bulletData
 		 * @param setCollider 新規に作成した際に設定する当たり判定
 		 */
 		public use(x: number, y: number, vx: number, vy:number, img: string, setCollider:(bullet: Bullet) => void) {
 			let bullet = this.createBullet(GameManager.getInstance().gameScene, img);
 			setCollider(bullet);
-			
+
 			bullet.use(x, y, vx, vy);
 		}
 

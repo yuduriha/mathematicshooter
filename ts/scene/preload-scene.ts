@@ -9,7 +9,7 @@ namespace mkg.mtsh {
 		}
 		create() {
 			GameManager.getInstance().setConfig(this);
-			console.log("bih version : " + GameManager.getInstance().config.version);
+			console.log("game version : " + GameManager.getInstance().config.version);
 		}
 		update() {
 			this.scene.start(CONST.SCENE_KEY.GAME);

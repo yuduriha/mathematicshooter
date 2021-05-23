@@ -1,3 +1,3 @@
 # mathematicshooter
 
-https://yuduriha.github.io/mathematicshooter/
+https://yuduriha.github.io/mathematicshooter/  

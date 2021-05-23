@@ -1,6 +1,5 @@
 namespace mkg.mtsh {
 	export class Bg {
-		// なんかオブジェクトプールうまく行っていない。当たり判定が消せてない
 		private static instance: Bg;
 		private bgList: Phaser.GameObjects.Image[] = [];
 		private constructor() {

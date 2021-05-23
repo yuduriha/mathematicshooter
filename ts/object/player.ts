@@ -5,7 +5,7 @@ namespace mkg.mtsh {
 			super(scene, x, y, texture, frame);
 			scene.add.existing(this);
 			scene.physics.add.existing(this);
-			
+
 			this.setOrigin(0.5);
 			let offset = this.width * (0.5 - CONST.PLAYER.HIT_DIAMETER);
 			this.setCircle(this.width * CONST.PLAYER.HIT_DIAMETER, offset, offset);
@@ -35,7 +35,7 @@ namespace mkg.mtsh {
 				isPress = true;
 				targetVec.y = 1;
 			}
-						
+
 			if(!isPress) {
 				this.setVelocity(0, 0);
 				return;

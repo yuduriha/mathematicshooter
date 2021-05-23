@@ -81,7 +81,7 @@ namespace mkg.mtsh {
 		 */
 		public setCollderBullet(bullet: Bullet) {
 			let scene = GameManager.getInstance().gameScene;
-			
+
 			// 自機との当たり判定
 			scene.physics.add.overlap(bullet, this.player, (b: Phaser.GameObjects.GameObject, p: Phaser.GameObjects.GameObject) => {
 				(<Bullet>b).hit();
@@ -94,19 +94,19 @@ namespace mkg.mtsh {
 		 */
 		public setCollderPlayerBullet(bullet: Bullet) {
 			let scene = GameManager.getInstance().gameScene;
-			
+
 			this.enemyList.forEach((enemy) => {
 				scene.physics.add.overlap(bullet, enemy, (b: Phaser.GameObjects.GameObject, e: Phaser.GameObjects.GameObject) => {
 					(<Bullet>b).hit();
 					(<Enemy>e).hit();
-					
+
 				}, undefined, scene);
 			});
 		}
 
 		/**
 		 * 自機と敵の当たり判定コールバック
-		 * @param p 
+		 * @param p
 		 */
 		private colliderPlayerToEnemy(p: Phaser.GameObjects.GameObject) {
 	//		this.hitPlayer(<Player>p);
@@ -114,7 +114,7 @@ namespace mkg.mtsh {
 
 		/**
 		 * 自機被弾処理
-		 * @param p 
+		 * @param p
 		 */
 		private hitPlayer(p: Player) {
 

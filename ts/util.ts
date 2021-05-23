@@ -24,7 +24,7 @@ namespace mkg.util {
 	/**
 	 * 極座標を直交座標に変換
 	 * @param x 原点位置
-	 * @param y 
+	 * @param y
 	 * @param r 半径
 	 * @param angle 角度(deg)
 	 */
@@ -43,7 +43,7 @@ namespace mkg.util {
 	 */
 	export function newVector2(r: number, angle: number) : Phaser.Math.Vector2 {
 		return new Phaser.Math.Vector2(
-			r * Math.cos(Phaser.Math.DegToRad(angle)), 
+			r * Math.cos(Phaser.Math.DegToRad(angle)),
 			r * Math.sin(Phaser.Math.DegToRad(angle)));
 	}
 
@@ -66,10 +66,10 @@ namespace mkg.util {
 	/**
 	 * 円の中に点が入っているか
 	 * @param cx 円の座標
-	 * @param cy 
+	 * @param cy
 	 * @param r 円の半径
 	 * @param tx ターゲットの座座標
-	 * @param ty 
+	 * @param ty
 	 */
 	export function hitCirclePoint(cx: number, cy: number, r: number, tx: number, ty: number) {
 		return (cx - tx) * (cx - tx) + (cy - ty) * (cy - ty) <= r * r;
@@ -78,11 +78,11 @@ namespace mkg.util {
 	/**
 	 * 矩形の中に点が入っているか
 	 * @param bx 矩形の座標
-	 * @param by 
+	 * @param by
 	 * @param bw 矩形の幅/高さ
 	 * @param bh
 	 * @param tx ターゲットの座座標
-	 * @param ty 
+	 * @param ty
 	 */
 	export function hitBoxPoint(bx: number, by: number, bw: number, bh: number, tx: number, ty: number) {
 		return (bx - bw * 0.5) <= tx && tx <= (bx + bw * 0.5) && (by - bh * 0.5) <= ty && ty <= (by + bh * 0.5);
@@ -113,7 +113,7 @@ namespace mkg.util {
 
 		// 目標と今の角度の差
 		let delta = util.subtractAngle(angle, dir);
-		
+
 		// 移動量のアンダーフロー・オーバーフロー
 		if(limit < delta) {
 			delta = limit;

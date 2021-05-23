@@ -6,7 +6,7 @@ namespace mkg.mtsh {
 			super(scene, 0, 0, texture, frame);
 			scene.add.existing(this);
 			scene.physics.add.existing(this);
-			
+
 			this.hitCallback = hitCallback;
 			this.setOrigin(0.5);
 			// 当たり判定は真円の想定
@@ -22,7 +22,7 @@ namespace mkg.mtsh {
 
 			this.setPosition(x, y);
 
-			// TODO 
+			// TODO
 			this.setVelocity(vx, vy);
 
 			this.velo = new Phaser.Math.Vector2(vx, vy);

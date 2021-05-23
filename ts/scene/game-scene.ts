@@ -10,7 +10,7 @@ namespace mkg.mtsh {
 			this.load.image(CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/takenoko_bamboo_shoot.png");
 			this.load.image(CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/kinoko.png");
 			this.load.image(CONST.RESOURCE_KEY.IMG.BG, "assets/img/pattern_shibafu.png");
-			
+
 		}
 		create() {
 			ObjectManager.getInstance().createObjects(this);

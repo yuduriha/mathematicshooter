@@ -24,7 +24,7 @@ namespace mkg.mtsh {
 		}
 
 		public hit() {
-			
+
 		}
 	}
 }
