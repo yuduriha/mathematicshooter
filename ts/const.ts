@@ -21,6 +21,7 @@ namespace mkg.mtsh {
 				BULET000: "img_bullet_000",
 				BULET001: "img_bullet_001",
 				BG:       "img_bg",
+				SMOKE:    "img_smoke",
 			}
 		};
 
@@ -81,7 +82,8 @@ namespace mkg.mtsh {
 					{x: 25, y: -25}, {x: 25, y: 0},
 					{x: -25, y: -25}, {x: -25, y: 0},
 				]
-			}
+			},
+			DEATH_EXPLOSION_INTERVAL: 600
 		};
 
 		static readonly BG = {
@@ -94,6 +96,11 @@ namespace mkg.mtsh {
 
 		static readonly BULLET = {
 			DEFO_ANGLE: 90
+		};
+
+		static readonly PARTICLES_COUNT = {
+			EXPLOSION: 26,
+			PLAYER_DEATH:64
 		};
 	}
 }
