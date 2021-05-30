@@ -217,6 +217,76 @@ var mkg;
 (function (mkg) {
     var mtsh;
     (function (mtsh) {
+        var DEFAULT_ANGLR = -Phaser.Math.TAU;
+        var Annulus = (function () {
+            function Annulus(scene, x, y, r, w, startAngle, endAngle, color, alpha) {
+                this.x = x;
+                this.y = y;
+                this.r = r;
+                this.w = w;
+                this.color = color;
+                this.alpha = alpha;
+                this._graphics = new Phaser.GameObjects.Graphics(scene);
+                this.drow(startAngle, endAngle);
+                scene.add.existing(this._graphics);
+            }
+            Object.defineProperty(Annulus.prototype, "graphics", {
+                get: function () { return this._graphics; },
+                enumerable: false,
+                configurable: true
+            });
+            ;
+            Annulus.prototype.drow = function (startAngle, endAngle) {
+                this._graphics.clear();
+                this._graphics.lineStyle(this.w, this.color, this.alpha);
+                this._graphics.beginPath();
+                this._graphics.arc(this.x, this.y, this.r, startAngle + DEFAULT_ANGLR, endAngle + DEFAULT_ANGLR);
+                this._graphics.strokePath();
+                this._graphics.closePath();
+            };
+            Annulus.prototype.update = function (startAngle, endAngle) {
+                this.drow(startAngle, endAngle);
+            };
+            return Annulus;
+        }());
+        mtsh.Annulus = Annulus;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
+        var WIDTH = 10;
+        var COLOR = 0x612c16;
+        var ALPHA = 0.5;
+        var EnemyHpGauge = (function () {
+            function EnemyHpGauge(scene, maxHp, r) {
+                this.maxHp = maxHp;
+                this.annulus = new mtsh.Annulus(scene, 0, 0, r, WIDTH, 0, Phaser.Math.PI2, COLOR, ALPHA);
+            }
+            Object.defineProperty(EnemyHpGauge.prototype, "graphics", {
+                get: function () { return this.annulus.graphics; },
+                enumerable: false,
+                configurable: true
+            });
+            ;
+            EnemyHpGauge.prototype.update = function (hp) {
+                var startAngle = (1 - hp / this.maxHp) * Phaser.Math.PI2;
+                var endAngle = Phaser.Math.PI2;
+                this.annulus.update(startAngle, endAngle);
+            };
+            EnemyHpGauge.prototype.destroy = function () {
+                this.annulus.graphics.destroy(true);
+            };
+            return EnemyHpGauge;
+        }());
+        mtsh.EnemyHpGauge = EnemyHpGauge;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
         var BulletManager = (function () {
             function BulletManager() {
                 this.bulletList = [];
@@ -361,8 +431,8 @@ var mkg;
             };
             ObjectManager.prototype.createEnemy = function (scene) {
                 var _this = this;
-                var enemy = new mtsh.Enemy(scene, mtsh.CONST.SCREEN_CENTER.x, 200, mtsh.CONST.RESOURCE_KEY.IMG.ENEMY);
-                scene.physics.add.overlap(this._player, enemy, function (p) {
+                var enemy = new mtsh.Enemy(scene, mtsh.CONST.SCREEN_CENTER.x, 200, mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, 100);
+                scene.physics.add.overlap(this._player, enemy.image, function (p) {
                     _this.colliderPlayerToEnemy(p);
                 }, undefined, scene);
                 this.enemyList.push(enemy);
@@ -378,10 +448,10 @@ var mkg;
             ObjectManager.prototype.setCollderPlayerBullet = function (bullet) {
                 var scene = mtsh.GameManager.getInstance().gameScene;
                 this.enemyList.forEach(function (enemy) {
-                    scene.physics.add.overlap(bullet, enemy, function (b, e) {
+                    scene.physics.add.overlap(bullet, enemy.image, function (b, e) {
                         mtsh.ParticlesManager.getInstance().explosion(mtsh.CONST.PARTICLES_COUNT.EXPLOSION, bullet.x, bullet.y);
-                        b.hit();
-                        e.hit();
+                        bullet.hit();
+                        enemy.hit();
                     }, undefined, scene);
                 });
             };
@@ -542,30 +612,50 @@ var mkg;
 (function (mkg) {
     var mtsh;
     (function (mtsh) {
-        var Enemy = (function (_super) {
-            __extends(Enemy, _super);
-            function Enemy(scene, x, y, texture, frame) {
-                var _this = _super.call(this, scene, x, y, texture, frame) || this;
-                scene.add.existing(_this);
-                scene.physics.add.existing(_this);
-                _this.setOrigin(0.5);
-                _this.setCircle(_this.width * 0.5);
-                _this.frameCounter = 0;
-                return _this;
+        var Enemy = (function () {
+            function Enemy(scene, x, y, texture, hp) {
+                this._image = new Phaser.Physics.Arcade.Image(scene, 0, 0, texture);
+                scene.add.existing(this._image);
+                scene.physics.add.existing(this._image);
+                this._image.setOrigin(0.5);
+                this._image.setCircle(this._image.width * 0.5);
+                this.hp = hp;
+                this.hpGauge = new mtsh.EnemyHpGauge(scene, this.hp, this._image.width / 2 + 10);
+                this.container = scene.add.container(x, y, [this._image, this.hpGauge.graphics]);
+                scene.physics.add.existing(this.container);
+                this.frameCounter = 0;
             }
+            Object.defineProperty(Enemy.prototype, "image", {
+                get: function () { return this._image; },
+                enumerable: false,
+                configurable: true
+            });
             Enemy.prototype.update = function (scene) {
                 ++this.frameCounter;
                 if (this.frameCounter % 30 === 0) {
                     var velo = mkg.util.newVector2(200, this.frameCounter * 0.5);
-                    mtsh.BulletManager.getInstance().use(this.x, this.y, velo.x, velo.y, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
+                    mtsh.BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
                         mtsh.ObjectManager.getInstance().setCollderBullet(b);
                     });
                 }
+                this.container.body.setVelocity(100 * Math.cos(0.01 * this.frameCounter), 100 * Math.sin(0.01 * this.frameCounter));
             };
             Enemy.prototype.hit = function () {
+                if (this.hp > 0) {
+                    --this.hp;
+                    this.hpGauge.update(this.hp);
+                }
+            };
+            Enemy.prototype.isDeath = function () {
+                return this.hp <= 0;
+            };
+            Enemy.prototype.destroy = function () {
+                this._image.destroy(true);
+                this.hpGauge.destroy();
+                this.container.destroy(true);
             };
             return Enemy;
-        }(Phaser.Physics.Arcade.Image));
+        }());
         mtsh.Enemy = Enemy;
     })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
 })(mkg || (mkg = {}));

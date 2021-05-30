@@ -61,10 +61,10 @@ namespace mkg.mtsh {
 		}
 
 		private createEnemy(scene: Phaser.Scene) {
-			let enemy = new Enemy(scene, CONST.SCREEN_CENTER.x, 200, CONST.RESOURCE_KEY.IMG.ENEMY);
+			let enemy = new Enemy(scene, CONST.SCREEN_CENTER.x, 200, CONST.RESOURCE_KEY.IMG.ENEMY, 100);
 
 			// 自機との当たり判定
-			scene.physics.add.overlap(this._player, enemy, (p: Phaser.GameObjects.GameObject) => {
+			scene.physics.add.overlap(this._player, enemy.image, (p: Phaser.GameObjects.GameObject) => {
 				this.colliderPlayerToEnemy(p);
 			}, undefined, scene);
 
@@ -91,11 +91,11 @@ namespace mkg.mtsh {
 			let scene = GameManager.getInstance().gameScene;
 
 			this.enemyList.forEach((enemy) => {
-				scene.physics.add.overlap(bullet, enemy, (b: Phaser.GameObjects.GameObject, e: Phaser.GameObjects.GameObject) => {
+				scene.physics.add.overlap(bullet, enemy.image, (b: Phaser.GameObjects.GameObject, e: Phaser.GameObjects.GameObject) => {
 				// 爆発演出再生
 				ParticlesManager.getInstance().explosion(CONST.PARTICLES_COUNT.EXPLOSION, bullet.x, bullet.y);
-					(<Bullet>b).hit();
-					(<Enemy>e).hit();
+					bullet.hit();
+					enemy.hit();
 				}, undefined, scene);
 			});
 		}
