@@ -89,7 +89,9 @@ namespace mkg.mtsh {
 
 			//this.update(scene);
 
-			this.enemy.body.y = CONST.ENEMY.START.y.to;//target.y;
+			this.enemy.startPattern(scene);
+
+			//body.y = CONST.ENEMY.START.y.to;//target.y;
 //			this.enemy.body.x = 100;
 			// 	//
 			// let target = {y: this.enemy.body.y};
@@ -115,7 +117,7 @@ namespace mkg.mtsh {
 
 			this._player.update(scene);
 
-			this.enemy.update(scene);
+			//this.enemy.update(scene);
 
 			if(this.isGameEnd()) {
 				callback();
@@ -150,8 +152,7 @@ namespace mkg.mtsh {
 		}
 
 		private createEnemy(scene: Phaser.Scene) {
-			// TODO HPは定数じゃなくて変数にすべきでは？
-			let enemy = new Enemy(scene, CONST.ENEMY.START.x, CONST.ENEMY.START.y.from, CONST.RESOURCE_KEY.IMG.ENEMY, 100);
+			let enemy = new Enemy(scene, CONST.ENEMY.START.x, CONST.ENEMY.START.y, CONST.RESOURCE_KEY.IMG.ENEMY, GameManager.getInstance().enemySetting);
 
 			// 自機との当たり判定
 			scene.physics.add.overlap(this._player, enemy.image, (p: Phaser.GameObjects.GameObject) => {

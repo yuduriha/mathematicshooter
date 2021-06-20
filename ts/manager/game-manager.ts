@@ -3,6 +3,7 @@ namespace mkg.mtsh {
 		private static instance: GameManager;
 		private _game: Phaser.Game;
 		private _config!: Config;
+		private _enemySetting!: EnemySetting;
 		private constructor(game: Phaser.Game) {
 			this._game = game;
 		}
@@ -27,6 +28,13 @@ namespace mkg.mtsh {
 		}
 
 		public get config() {return this._config};
+
+		public setEnemySetting(scene: Phaser.Scene): Config {
+			this._enemySetting = scene.cache.json.get(CONST.RESOURCE_KEY.JSON.ENEMY_SETTING);
+			return this._enemySetting;
+		}
+
+		public get enemySetting() {return this._enemySetting};
 
 		/**
 		 * ゲームシーン取得

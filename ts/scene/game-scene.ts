@@ -9,16 +9,6 @@ namespace mkg.mtsh {
 			super(CONST.SCENE_KEY.GAME);
 		}
 		preload() {
-			this.load.image(CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/character_takenoko.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/character_kinoko.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/takenoko_bamboo_shoot.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/kinoko.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.BG, "assets/img/pattern_shibafu.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.SMOKE, "assets/img/bakuhatsu1.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.FILTER, "assets/img/filter.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.WIN, "assets/img/text_win.png");
-			this.load.image(CONST.RESOURCE_KEY.IMG.LOSE, "assets/img/text_lose.png");
-//			this.load.image(CONST.RESOURCE_KEY.IMG.TAP, "assets/img/text_tap.png");
 		}
 		create() {
 			ObjectManager.getInstance().createObjects(this);
@@ -64,6 +54,7 @@ namespace mkg.mtsh {
 		update() {
 			this.debugText.setText([
 				"FPS : " + GameManager.getInstance().game.loop.actualFps,
+				"version : " + GameManager.getInstance().config.version,
 				"Bullet size : " + BulletManager.getInstance().listSize()
 			]);
 

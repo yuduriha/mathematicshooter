@@ -45,6 +45,7 @@ var mkg;
             CONST.RESOURCE_KEY = {
                 JSON: {
                     CONFIG: "json_config",
+                    ENEMY_SETTING: "enemy_setting"
                 },
                 IMG: {
                     PLAYER: "img_player",
@@ -108,12 +109,8 @@ var mkg;
             CONST.ENEMY = {
                 START: {
                     x: CONST.SCREEN_CENTER.x,
-                    y: {
-                        from: -100,
-                        to: 100
-                    },
-                    duration: 1000
-                },
+                    y: -100
+                }
             };
             CONST.BG = {
                 TILE_SIZE: {
@@ -414,6 +411,16 @@ var mkg;
                 configurable: true
             });
             ;
+            GameManager.prototype.setEnemySetting = function (scene) {
+                this._enemySetting = scene.cache.json.get(mtsh.CONST.RESOURCE_KEY.JSON.ENEMY_SETTING);
+                return this._enemySetting;
+            };
+            Object.defineProperty(GameManager.prototype, "enemySetting", {
+                get: function () { return this._enemySetting; },
+                enumerable: false,
+                configurable: true
+            });
+            ;
             Object.defineProperty(GameManager.prototype, "gameScene", {
                 get: function () {
                     return this._game.scene.getScene(mtsh.CONST.SCENE_KEY.GAME);
@@ -483,12 +490,11 @@ var mkg;
             };
             ObjectManager.prototype.playPhaseInit = function (scene) {
                 this._playerState = mtsh.PLAYER_STATE.PLAY;
-                this.enemy.body.y = mtsh.CONST.ENEMY.START.y.to;
+                this.enemy.startPattern(scene);
             };
             ObjectManager.prototype.playPhase = function (scene, callback) {
                 this.update(scene);
                 this._player.update(scene);
-                this.enemy.update(scene);
                 if (this.isGameEnd()) {
                     callback();
                 }
@@ -504,7 +510,7 @@ var mkg;
             };
             ObjectManager.prototype.createEnemy = function (scene) {
                 var _this = this;
-                var enemy = new mtsh.Enemy(scene, mtsh.CONST.ENEMY.START.x, mtsh.CONST.ENEMY.START.y.from, mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, 100);
+                var enemy = new mtsh.Enemy(scene, mtsh.CONST.ENEMY.START.x, mtsh.CONST.ENEMY.START.y, mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, mtsh.GameManager.getInstance().enemySetting);
                 scene.physics.add.overlap(this._player, enemy.image, function (p) {
                     _this.colliderPlayerToEnemy(p);
                 }, undefined, scene);
@@ -805,13 +811,19 @@ var mkg;
     var mtsh;
     (function (mtsh) {
         var Enemy = (function () {
-            function Enemy(scene, x, y, texture, hp) {
+            function Enemy(scene, x, y, texture, setting) {
+                this.setting = setting;
+                this.moveStep = 0;
+                this.moveTween = undefined;
+                this.shotStep = 0;
+                this.shotDurationTimer = undefined;
+                this.shotIntervalTimer = undefined;
                 this._image = new Phaser.Physics.Arcade.Image(scene, 0, 0, texture);
                 scene.add.existing(this._image);
                 scene.physics.add.existing(this._image);
                 this._image.setOrigin(0.5);
                 this._image.setCircle(this._image.width * 0.5);
-                this.hp = hp;
+                this.hp = setting.max_hp;
                 this.hpGauge = new mtsh.EnemyHpGauge(scene, this.hp, this._image.width / 2 + 10);
                 this.container = scene.add.container(x, y, [this._image, this.hpGauge.graphics]);
                 scene.physics.add.existing(this.container);
@@ -826,7 +838,87 @@ var mkg;
                 enumerable: false,
                 configurable: true
             });
-            Enemy.prototype.update = function (scene) {
+            Enemy.prototype.startPattern = function (scene) {
+                this.dispatchMoveTween(scene);
+                this.dispatchShotTimer(scene);
+            };
+            Enemy.prototype.dispatchMoveTween = function (scene) {
+                if (this.setting.move_pattern.length > this.moveStep) {
+                    var movePattern = this.setting.move_pattern[this.moveStep];
+                    this.addMoveTween(scene, movePattern.duration, movePattern.move);
+                }
+            };
+            Enemy.prototype.addMoveTween = function (scene, duration, move) {
+                var _this = this;
+                var target = {
+                    x: move.x.from,
+                    y: move.y.from
+                };
+                var setVelocity = function (x, y) {
+                    _this.body.setVelocity(x, y);
+                };
+                setVelocity(target.x, target.y);
+                this.moveTween = scene.tweens.add({
+                    targets: target,
+                    x: move.x.to,
+                    y: move.y.to,
+                    duration: duration,
+                    onUpdate: function () {
+                        setVelocity(target.x, target.y);
+                    },
+                    onComplete: function () {
+                        if (move.end) {
+                            setVelocity(move.end.x, move.end.y);
+                        }
+                        ++_this.moveStep;
+                        _this.dispatchMoveTween(scene);
+                    }
+                });
+            };
+            Enemy.prototype.dispatchShotTimer = function (scene) {
+                var step = this.setting.shot_pattern.length > this.shotStep ? this.shotStep : this.setting.shot_pattern.length - 1;
+                var pattern = this.setting.shot_pattern[step];
+                this.addShotTimer(scene, pattern.duration, pattern.interval, pattern.type, pattern.parame);
+            };
+            Enemy.prototype.addShotTimer = function (scene, duration, interval, type, parame) {
+                var _this = this;
+                this.setShotInterval(scene, interval, type, parame);
+                this.shotDurationTimer = scene.time.addEvent({ delay: duration, callback: function () {
+                        ++_this.shotStep;
+                        _this.dispatchShotTimer(scene);
+                    } });
+            };
+            Enemy.prototype.setShotInterval = function (scene, interval, type, parame) {
+                var _this = this;
+                this.stopShotInterval();
+                this.shotIntervalTimer = scene.time.addEvent({ delay: interval, loop: true, callback: function () {
+                        _this.shot(scene, type, parame);
+                    } });
+            };
+            Enemy.prototype.stopShotInterval = function () {
+                if (this.shotIntervalTimer) {
+                    this.shotIntervalTimer.remove();
+                    this.shotIntervalTimer.destroy();
+                    this.shotIntervalTimer = undefined;
+                }
+            };
+            Enemy.prototype.shot = function (scene, type, parame) {
+                switch (type) {
+                    case 0:
+                        break;
+                    case 1:
+                        this.shotPattern1(scene, parame);
+                        break;
+                }
+            };
+            Enemy.prototype.shotPattern1 = function (scene, parame) {
+                if (!parame || !parame.velo || !parame.angle_rate || !this.shotDurationTimer) {
+                    return;
+                }
+                var velo = mkg.util.newVector2(parame.velo, this.shotDurationTimer.getProgress() * parame.angle_rate);
+                mtsh.BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
+                    mtsh.ObjectManager.getInstance().setCollderBullet(b);
+                });
             };
             Enemy.prototype.hit = function () {
                 if (this.hp > 0) {
@@ -841,11 +933,23 @@ var mkg;
                 return this.hp <= 0;
             };
             Enemy.prototype.destroy = function () {
+                this.stop();
                 this._image.destroy(true);
                 this.hpGauge.destroy();
                 this.container.destroy(true);
             };
             Enemy.prototype.stop = function () {
+                this.body.setVelocity(0, 0);
+                if (this.moveTween) {
+                    this.moveTween.stop();
+                    this.moveTween = undefined;
+                }
+                if (this.shotDurationTimer) {
+                    this.shotDurationTimer.remove();
+                    this.shotDurationTimer.destroy();
+                    this.shotDurationTimer = undefined;
+                }
+                this.stopShotInterval();
             };
             return Enemy;
         }());
@@ -959,15 +1063,6 @@ var mkg;
                 return _this;
             }
             GameScene.prototype.preload = function () {
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/character_takenoko.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/character_kinoko.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/takenoko_bamboo_shoot.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/kinoko.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BG, "assets/img/pattern_shibafu.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.SMOKE, "assets/img/bakuhatsu1.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.FILTER, "assets/img/filter.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.WIN, "assets/img/text_win.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.LOSE, "assets/img/text_lose.png");
             };
             GameScene.prototype.create = function () {
                 var _this = this;
@@ -1003,6 +1098,7 @@ var mkg;
                 var _this = this;
                 this.debugText.setText([
                     "FPS : " + mtsh.GameManager.getInstance().game.loop.actualFps,
+                    "version : " + mtsh.GameManager.getInstance().config.version,
                     "Bullet size : " + mtsh.BulletManager.getInstance().listSize()
                 ]);
                 switch (this.majorState) {
@@ -1071,9 +1167,20 @@ var mkg;
             }
             PreloadScene.prototype.preload = function () {
                 this.load.json(mtsh.CONST.RESOURCE_KEY.JSON.CONFIG, "assets/json/config.json");
+                this.load.json(mtsh.CONST.RESOURCE_KEY.JSON.ENEMY_SETTING, "assets/json/enemy_setting.json");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/character_takenoko.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, "assets/img/character_kinoko.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET000, "assets/img/takenoko_bamboo_shoot.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/kinoko.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BG, "assets/img/pattern_shibafu.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.SMOKE, "assets/img/bakuhatsu1.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.FILTER, "assets/img/filter.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.WIN, "assets/img/text_win.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.LOSE, "assets/img/text_lose.png");
             };
             PreloadScene.prototype.create = function () {
                 mtsh.GameManager.getInstance().setConfig(this);
+                mtsh.GameManager.getInstance().setEnemySetting(this);
                 console.log("game version : " + mtsh.GameManager.getInstance().config.version);
             };
             PreloadScene.prototype.update = function () {

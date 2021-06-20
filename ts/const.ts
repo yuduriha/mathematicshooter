@@ -39,6 +39,7 @@ namespace mkg.mtsh {
 		static readonly RESOURCE_KEY = {
 			JSON: {
 				CONFIG: "json_config",
+				ENEMY_SETTING: "enemy_setting"
 			},
 			IMG: {
 				PLAYER:   "img_player",
@@ -126,12 +127,8 @@ namespace mkg.mtsh {
 			// 初期配置する画面外座標
 			START: {
 				x: CONST.SCREEN_CENTER.x,
-				y: {
-					from: -100,
-					to: 100
-				},
-				duration: 1000
-			},
+				y: -100
+			}
 		};
 		static readonly BG = {
 			TILE_SIZE: {
