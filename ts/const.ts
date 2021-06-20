@@ -161,5 +161,9 @@ namespace mkg.mtsh {
 		}
 
 		static readonly TRANSITON_IMG_SIZE = 64;
+
+		static readonly CLASS = {
+			HIDE_CURSOR: "hide-cursor"
+		}
 	}
 }

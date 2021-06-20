@@ -3,3 +3,7 @@ body {
 	background-image: radial-gradient(#ff9e1b 2px, transparent 2px);
 	background-size: 20px 20px;
 }
+
+.hide-cursor{
+	cursor: none;
+}

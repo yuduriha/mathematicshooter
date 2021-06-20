@@ -4,9 +4,11 @@ namespace mkg.mtsh {
 		private majorState: GAME_STATE = GAME_STATE.INIT;
 		private minorState: MINOR_STATE = MINOR_STATE.INIT;
 		private uiCamera!: Phaser.Cameras.Scene2D.Camera;
+		private cursorTimer: Phaser.Time.TimerEvent | null;
 		private nextKeyCallback?: () => void;
 		constructor() {
 			super(CONST.SCENE_KEY.GAME);
+			this.cursorTimer = null;;
 		}
 		preload() {
 		}
@@ -27,6 +29,44 @@ namespace mkg.mtsh {
 			}, 0.3);
 
 			this.setupKey();
+
+			this.hideCursor();
+		}
+
+		private hideCursor() {
+			this.cursorTimer = null;
+
+			let timerRestart = () => {
+				this.stopHideCursorTimer();
+				this.startHideCursorTimer();
+			}
+
+			// 最初から停止しているかもしれないので、一旦消すタイマーを起動させる。
+			timerRestart();
+
+			window.addEventListener('mousemove', () => {
+				// マウスが動いたらカーソルを表示して
+				let canvas = document.getElementsByTagName("canvas");
+				canvas[0].classList.remove(CONST.CLASS.HIDE_CURSOR);
+
+				// タイマー再起動
+				timerRestart();
+			});
+		}
+
+		private startHideCursorTimer() {
+			let canvas = document.getElementsByTagName("canvas");
+			this.cursorTimer = this.time.addEvent({delay: 1000, callback: () => {
+				canvas[0].classList.add(CONST.CLASS.HIDE_CURSOR);
+				this.cursorTimer = null;
+			}});
+		}
+
+		private stopHideCursorTimer() {
+			if(this.cursorTimer) {
+				this.cursorTimer.remove();
+				this.cursorTimer.destroy();
+			}
 		}
 
 		setupKey() {
@@ -110,6 +150,11 @@ namespace mkg.mtsh {
 			this.destroyObject();
 			ParticlesManager.getInstance().destroy();
 			TransitionManager.getInstance().destroy();
+
+			// カーソル表示
+			this.stopHideCursorTimer();
+			let canvas = document.getElementsByTagName("canvas");
+			canvas[0].classList.remove(CONST.CLASS.HIDE_CURSOR);
 		}
 		private destroyObject() {
 			ObjectManager.getInstance().destroyObjects();

@@ -135,6 +135,9 @@ var mkg;
                 TRANSITION: 200
             };
             CONST.TRANSITON_IMG_SIZE = 64;
+            CONST.CLASS = {
+                HIDE_CURSOR: "hide-cursor"
+            };
             return CONST;
         }());
         mtsh.CONST = CONST;
@@ -1060,6 +1063,8 @@ var mkg;
                 var _this = _super.call(this, mtsh.CONST.SCENE_KEY.GAME) || this;
                 _this.majorState = mtsh.GAME_STATE.INIT;
                 _this.minorState = mtsh.MINOR_STATE.INIT;
+                _this.cursorTimer = null;
+                ;
                 return _this;
             }
             GameScene.prototype.preload = function () {
@@ -1076,6 +1081,35 @@ var mkg;
                     _this.setState(mtsh.GAME_STATE.START);
                 }, 0.3);
                 this.setupKey();
+                this.hideCursor();
+            };
+            GameScene.prototype.hideCursor = function () {
+                var _this = this;
+                this.cursorTimer = null;
+                var timerRestart = function () {
+                    _this.stopHideCursorTimer();
+                    _this.startHideCursorTimer();
+                };
+                timerRestart();
+                window.addEventListener('mousemove', function () {
+                    var canvas = document.getElementsByTagName("canvas");
+                    canvas[0].classList.remove(mtsh.CONST.CLASS.HIDE_CURSOR);
+                    timerRestart();
+                });
+            };
+            GameScene.prototype.startHideCursorTimer = function () {
+                var _this = this;
+                var canvas = document.getElementsByTagName("canvas");
+                this.cursorTimer = this.time.addEvent({ delay: 1000, callback: function () {
+                        canvas[0].classList.add(mtsh.CONST.CLASS.HIDE_CURSOR);
+                        _this.cursorTimer = null;
+                    } });
+            };
+            GameScene.prototype.stopHideCursorTimer = function () {
+                if (this.cursorTimer) {
+                    this.cursorTimer.remove();
+                    this.cursorTimer.destroy();
+                }
             };
             GameScene.prototype.setupKey = function () {
                 var _this = this;
@@ -1146,6 +1180,9 @@ var mkg;
                 this.destroyObject();
                 mtsh.ParticlesManager.getInstance().destroy();
                 mtsh.TransitionManager.getInstance().destroy();
+                this.stopHideCursorTimer();
+                var canvas = document.getElementsByTagName("canvas");
+                canvas[0].classList.remove(mtsh.CONST.CLASS.HIDE_CURSOR);
             };
             GameScene.prototype.destroyObject = function () {
                 mtsh.ObjectManager.getInstance().destroyObjects();
