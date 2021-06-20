@@ -4,7 +4,8 @@ namespace mkg.mtsh {
 		private hp: number;
 		private container: Phaser.GameObjects.Container;
 		private hpGauge: EnemyHpGauge;
-		private frameCounter: number;
+//		private frameCounter: number;
+		public get body() {return <Phaser.Physics.Arcade.Body>this.container.body;}
 		public get image() {return this._image;}
 		constructor(scene: Phaser.Scene, x: number, y: number, texture: string, hp: number) {
 
@@ -22,27 +23,31 @@ namespace mkg.mtsh {
 			this.container = scene.add.container(x, y, [this._image, this.hpGauge.graphics]);
 			scene.physics.add.existing(this.container);
 
-			this.frameCounter = 0;
+//			this.frameCounter = 0;
 		}
 
 		public update(scene: Phaser.Scene) {
-			++this.frameCounter;
+			// ++this.frameCounter;
 
-			if(this.frameCounter % 30 === 0) {
-				let velo = util.newVector2(200, this.frameCounter * 0.5);
-				BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, CONST.RESOURCE_KEY.IMG.BULET001, (b: Bullet) => {
-					ObjectManager.getInstance().setCollderBullet(b);
-				});
-			}
+			// if(this.frameCounter % 30 === 0) {
+			// 	let velo = util.newVector2(200, this.frameCounter * 0.5);
+			// 	BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, CONST.RESOURCE_KEY.IMG.BULET001, (b: Bullet) => {
+			// 		ObjectManager.getInstance().setCollderBullet(b);
+			// 	});
+			// }
 
-			(<Phaser.Physics.Arcade.Body>this.container.body).setVelocity(100 * Math.cos(0.01 * this.frameCounter), 100 * Math.sin(0.01 * this.frameCounter));
-
+			//(<Phaser.Physics.Arcade.Body>this.container.body).setVelocity(100 * Math.cos(0.01 * this.frameCounter), 100 * Math.sin(0.01 * this.frameCounter));
 		}
 
 		public hit() {
 			if(this.hp > 0) {
 				--this.hp;
 				this.hpGauge.update(this.hp);
+
+				if(this.isDeath()) {
+					// TODO 死んだ演出？とりあえず消してみる
+					this.image.setVisible(false);
+				}
 			}
 		}
 

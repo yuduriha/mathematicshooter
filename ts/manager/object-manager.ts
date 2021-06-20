@@ -3,7 +3,8 @@ namespace mkg.mtsh {
 		private static instance: ObjectManager;
 
 		private _player!: Player;
-		private enemyList: Enemy[] = [];
+		private enemy!: Enemy;
+		private _playerState: PLAYER_STATE = PLAYER_STATE.INIT;
 		private playerDeathTimer?: Phaser.Time.TimerEvent|null;
 
 		public get player() {
@@ -28,10 +29,8 @@ namespace mkg.mtsh {
 			// 自機
 			this._player.destroy(true);
 			// 敵機
-			this.enemyList.forEach((e: Enemy) => {
-				e.destroy();
-			});
-			this.enemyList = [];
+			this.enemy.destroy();
+
 			// 弾
 			BulletManager.getInstance().destroyBulletAll();
 		}
@@ -41,34 +40,122 @@ namespace mkg.mtsh {
 			Bg.getInstance().create(scene, CONST.RESOURCE_KEY.IMG.BG);
 
 			// 自機作成
-			this._player = new Player(scene, CONST.PLAYER.INIT_POS.x, CONST.PLAYER.INIT_POS.y, CONST.RESOURCE_KEY.IMG.PLAYER);
+			this._player = new Player(scene, CONST.PLAYER.START.x, CONST.PLAYER.START.y.from, CONST.RESOURCE_KEY.IMG.PLAYER);
 			// 敵機作成
 			this.createEnemy(scene);
 			// 爆発管理初期化
 			ParticlesManager.getInstance().init(scene);
+
+			this._playerState = PLAYER_STATE.INIT;
+
+			this.playerDeathTimer = null;
 		}
 
-		public update(scene: Phaser.Scene) {
+		private update(scene: Phaser.Scene) {
 			Bg.getInstance().update();
-
-			this._player.update(scene);
-
-			this.enemyList.forEach((e) => {
-				e.update(scene);
-			});
 
 			BulletManager.getInstance().update();
 		}
 
+		/**
+		 * 開始フェイズ初期化
+		 */
+		public startPhaseInit(scene: Phaser.Scene, onComplete: () => void) {
+			//this.update(scene);
+
+			// 自機をスタート位置から前に進める
+			GameManager.getInstance().gameScene.tweens.add({
+				targets: this._player,
+				y: CONST.PLAYER.START.y.to,
+				duration: CONST.PLAYER.START.duration,
+				onComplete: () => {
+					onComplete();
+				}
+			});
+		}
+
+		/**
+		 * 開始フェイズ処理
+		 */
+		public startPhase(scene: Phaser.Scene) {
+			this.update(scene);
+		}
+
+		/**
+		 * 操作フェイズ処理初期化
+		 */
+		public playPhaseInit(scene: Phaser.Scene) {
+			this._playerState = PLAYER_STATE.PLAY;
+
+			//this.update(scene);
+
+			this.enemy.body.y = CONST.ENEMY.START.y.to;//target.y;
+//			this.enemy.body.x = 100;
+			// 	//
+			// let target = {y: this.enemy.body.y};
+			// // 敵機をスタート位置から前に進める
+			// GameManager.getInstance().gameScene.tweens.add({
+			// 	targets: target,
+			// 	y: CONST.ENEMY.START.y.to,
+			// 	duration: CONST.ENEMY.START.duration,
+			// 	onUpdate: () => {
+			// 		console.log(target.y);
+			// 		//this.enemy.body.y = 100;//target.y;
+			// 		//this.enemy.body.x = 100;
+			// 	//	this.enemy.body.y = 100;
+			// 	},
+			// });
+		}
+
+		/**
+		 * 操作フェイズ処理
+		 */
+		public playPhase(scene: Phaser.Scene, callback: () => void) {
+			this.update(scene);
+
+			this._player.update(scene);
+
+			this.enemy.update(scene);
+
+			if(this.isGameEnd()) {
+				callback();
+			}
+			// TODO これ順番変えて大丈夫か？ 一部updateに移動中
+			// this._player.update(scene);
+
+			// this.enemyList.forEach((e) => {
+			// 	e.update(scene);
+			// });
+
+			// BulletManager.getInstance().update();
+		}
+
+		/**
+		 * 終了フェイズ初期化
+		 */
+		public endPhaseInit(scene: Phaser.Scene) {
+			//this.update(scene);
+			var label = scene.add.image(CONST.SCREEN_CENTER.x, CONST.SCREEN_CENTER.y, this.isWin() ? CONST.RESOURCE_KEY.IMG.WIN : CONST.RESOURCE_KEY.IMG.LOSE);
+			label.setOrigin(0.5, 0.5);
+		}
+
+		/**
+		 * 終了フェイズ処理
+		 */
+		public endPhase(scene: Phaser.Scene) {
+			this.update(scene);
+		}
+
 		private createEnemy(scene: Phaser.Scene) {
-			let enemy = new Enemy(scene, CONST.SCREEN_CENTER.x, 200, CONST.RESOURCE_KEY.IMG.ENEMY, 100);
+			// TODO HPは定数じゃなくて変数にすべきでは？
+			let enemy = new Enemy(scene, CONST.ENEMY.START.x, CONST.ENEMY.START.y.from, CONST.RESOURCE_KEY.IMG.ENEMY, 100);
 
 			// 自機との当たり判定
 			scene.physics.add.overlap(this._player, enemy.image, (p: Phaser.GameObjects.GameObject) => {
 				this.colliderPlayerToEnemy(p);
 			}, undefined, scene);
 
-			this.enemyList.push(enemy);
+			this.enemy = enemy;
 		}
 
 		/***
@@ -90,14 +177,21 @@ namespace mkg.mtsh {
 		public setCollderPlayerBullet(bullet: Bullet) {
 			let scene = GameManager.getInstance().gameScene;
 
-			this.enemyList.forEach((enemy) => {
-				scene.physics.add.overlap(bullet, enemy.image, (b: Phaser.GameObjects.GameObject, e: Phaser.GameObjects.GameObject) => {
-				// 爆発演出再生
-				ParticlesManager.getInstance().explosion(CONST.PARTICLES_COUNT.EXPLOSION, bullet.x, bullet.y);
+			scene.physics.add.overlap(bullet, this.enemy.image, (b: Phaser.GameObjects.GameObject, e: Phaser.GameObjects.GameObject) => {
+				// まだ生きていたら
+				if (!this.enemy.isDeath()) {
+					// 爆発演出再生
+					ParticlesManager.getInstance().explosion(CONST.PARTICLES_COUNT.EXPLOSION, bullet.x, bullet.y);
+
 					bullet.hit();
-					enemy.hit();
-				}, undefined, scene);
-			});
+					this.enemy.hit();
+
+					// 今回の被弾で死んだら
+					if (this.enemy.isDeath()) {
+						this._playerState = PLAYER_STATE.WIN;
+					}
+				}
+			}, undefined, scene);
 		}
 
 		/**
@@ -114,7 +208,7 @@ namespace mkg.mtsh {
 		 */
 		private hitPlayer(p: Player) {
 			// 操作中なら死亡
-//			if(this._playerState === PLAYER_STATE.PLAY) {
+			if(this._playerState === PLAYER_STATE.PLAY) {
 				let scene = GameManager.getInstance().gameScene;
 
 				// 一旦爆発作って、繰り返し
@@ -134,11 +228,16 @@ namespace mkg.mtsh {
 					}
 				});
 
-	//			this.postDeathPlayer();
+				this._playerState = PLAYER_STATE.DEATH;
+			}
+		}
 
-				// MEMO 無敵にするならコココメントあうと
-				//this._playerState = PLAYER_STATE.DEATH;
-			//}
+		public isGameEnd() {
+			return this._playerState === PLAYER_STATE.WIN || this._playerState === PLAYER_STATE.DEATH;
+		}
+
+		public isWin() {
+			return this._playerState === PLAYER_STATE.WIN;
 		}
 	}
 }

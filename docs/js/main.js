@@ -16,6 +16,25 @@ var mkg;
 (function (mkg) {
     var mtsh;
     (function (mtsh) {
+        var GAME_STATE;
+        (function (GAME_STATE) {
+            GAME_STATE[GAME_STATE["INIT"] = 0] = "INIT";
+            GAME_STATE[GAME_STATE["START"] = 1] = "START";
+            GAME_STATE[GAME_STATE["PLAY"] = 2] = "PLAY";
+            GAME_STATE[GAME_STATE["END"] = 3] = "END";
+        })(GAME_STATE = mtsh.GAME_STATE || (mtsh.GAME_STATE = {}));
+        var MINOR_STATE;
+        (function (MINOR_STATE) {
+            MINOR_STATE[MINOR_STATE["INIT"] = 0] = "INIT";
+            MINOR_STATE[MINOR_STATE["WAIT"] = 1] = "WAIT";
+        })(MINOR_STATE = mtsh.MINOR_STATE || (mtsh.MINOR_STATE = {}));
+        var PLAYER_STATE;
+        (function (PLAYER_STATE) {
+            PLAYER_STATE[PLAYER_STATE["INIT"] = 0] = "INIT";
+            PLAYER_STATE[PLAYER_STATE["PLAY"] = 1] = "PLAY";
+            PLAYER_STATE[PLAYER_STATE["DEATH"] = 2] = "DEATH";
+            PLAYER_STATE[PLAYER_STATE["WIN"] = 3] = "WIN";
+        })(PLAYER_STATE = mtsh.PLAYER_STATE || (mtsh.PLAYER_STATE = {}));
         var CONST = (function () {
             function CONST() {
             }
@@ -34,6 +53,10 @@ var mkg;
                     BULET001: "img_bullet_001",
                     BG: "img_bg",
                     SMOKE: "img_smoke",
+                    FILTER: "img_filter",
+                    WIN: "img_win",
+                    LOSE: "img_lose",
+                    TAP: "img_tap",
                 }
             };
             CONST.SCREEN = {
@@ -62,9 +85,13 @@ var mkg;
             };
             CONST.PLAYER = {
                 SPEED: 200,
-                INIT_POS: {
+                START: {
                     x: CONST.SCREEN_CENTER.x,
-                    y: 700
+                    y: {
+                        from: CONST.SCREEN.height + 50,
+                        to: CONST.SCREEN.height - 150,
+                    },
+                    duration: 1000
                 },
                 HIT_DIAMETER: 0.25,
                 BULLET: {
@@ -77,6 +104,16 @@ var mkg;
                     ]
                 },
                 DEATH_EXPLOSION_INTERVAL: 600
+            };
+            CONST.ENEMY = {
+                START: {
+                    x: CONST.SCREEN_CENTER.x,
+                    y: {
+                        from: -100,
+                        to: 100
+                    },
+                    duration: 1000
+                },
             };
             CONST.BG = {
                 TILE_SIZE: {
@@ -127,7 +164,7 @@ var mkg;
                 physics: {
                     default: 'arcade',
                     arcade: {
-                        debug: false
+                        debug: true
                     }
                 },
                 scene: [
@@ -258,7 +295,7 @@ var mkg;
     (function (mtsh) {
         var WIDTH = 10;
         var COLOR = 0x612c16;
-        var ALPHA = 0.5;
+        var ALPHA = 0.6;
         var EnemyHpGauge = (function () {
             function EnemyHpGauge(scene, maxHp, r) {
                 this.maxHp = maxHp;
@@ -388,7 +425,7 @@ var mkg;
     (function (mtsh) {
         var ObjectManager = (function () {
             function ObjectManager() {
-                this.enemyList = [];
+                this._playerState = mtsh.PLAYER_STATE.INIT;
             }
             Object.defineProperty(ObjectManager.prototype, "player", {
                 get: function () {
@@ -409,33 +446,60 @@ var mkg;
                     this.playerDeathTimer = null;
                 }
                 this._player.destroy(true);
-                this.enemyList.forEach(function (e) {
-                    e.destroy();
-                });
-                this.enemyList = [];
+                this.enemy.destroy();
                 mtsh.BulletManager.getInstance().destroyBulletAll();
             };
             ObjectManager.prototype.createObjects = function (scene) {
                 mtsh.Bg.getInstance().create(scene, mtsh.CONST.RESOURCE_KEY.IMG.BG);
-                this._player = new mtsh.Player(scene, mtsh.CONST.PLAYER.INIT_POS.x, mtsh.CONST.PLAYER.INIT_POS.y, mtsh.CONST.RESOURCE_KEY.IMG.PLAYER);
+                this._player = new mtsh.Player(scene, mtsh.CONST.PLAYER.START.x, mtsh.CONST.PLAYER.START.y.from, mtsh.CONST.RESOURCE_KEY.IMG.PLAYER);
                 this.createEnemy(scene);
                 mtsh.ParticlesManager.getInstance().init(scene);
+                this._playerState = mtsh.PLAYER_STATE.INIT;
+                this.playerDeathTimer = null;
             };
             ObjectManager.prototype.update = function (scene) {
                 mtsh.Bg.getInstance().update();
-                this._player.update(scene);
-                this.enemyList.forEach(function (e) {
-                    e.update(scene);
-                });
                 mtsh.BulletManager.getInstance().update();
+            };
+            ObjectManager.prototype.startPhaseInit = function (scene, onComplete) {
+                mtsh.GameManager.getInstance().gameScene.tweens.add({
+                    targets: this._player,
+                    y: mtsh.CONST.PLAYER.START.y.to,
+                    duration: mtsh.CONST.PLAYER.START.duration,
+                    onComplete: function () {
+                        onComplete();
+                    }
+                });
+            };
+            ObjectManager.prototype.startPhase = function (scene) {
+                this.update(scene);
+            };
+            ObjectManager.prototype.playPhaseInit = function (scene) {
+                this._playerState = mtsh.PLAYER_STATE.PLAY;
+                this.enemy.body.y = mtsh.CONST.ENEMY.START.y.to;
+            };
+            ObjectManager.prototype.playPhase = function (scene, callback) {
+                this.update(scene);
+                this._player.update(scene);
+                this.enemy.update(scene);
+                if (this.isGameEnd()) {
+                    callback();
+                }
+            };
+            ObjectManager.prototype.endPhaseInit = function (scene) {
+                var label = scene.add.image(mtsh.CONST.SCREEN_CENTER.x, mtsh.CONST.SCREEN_CENTER.y, this.isWin() ? mtsh.CONST.RESOURCE_KEY.IMG.WIN : mtsh.CONST.RESOURCE_KEY.IMG.LOSE);
+                label.setOrigin(0.5, 0.5);
+            };
+            ObjectManager.prototype.endPhase = function (scene) {
+                this.update(scene);
             };
             ObjectManager.prototype.createEnemy = function (scene) {
                 var _this = this;
-                var enemy = new mtsh.Enemy(scene, mtsh.CONST.SCREEN_CENTER.x, 200, mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, 100);
+                var enemy = new mtsh.Enemy(scene, mtsh.CONST.ENEMY.START.x, mtsh.CONST.ENEMY.START.y.from, mtsh.CONST.RESOURCE_KEY.IMG.ENEMY, 100);
                 scene.physics.add.overlap(this._player, enemy.image, function (p) {
                     _this.colliderPlayerToEnemy(p);
                 }, undefined, scene);
-                this.enemyList.push(enemy);
+                this.enemy = enemy;
             };
             ObjectManager.prototype.setCollderBullet = function (bullet) {
                 var _this = this;
@@ -446,34 +510,47 @@ var mkg;
                 }, undefined, scene);
             };
             ObjectManager.prototype.setCollderPlayerBullet = function (bullet) {
+                var _this = this;
                 var scene = mtsh.GameManager.getInstance().gameScene;
-                this.enemyList.forEach(function (enemy) {
-                    scene.physics.add.overlap(bullet, enemy.image, function (b, e) {
+                scene.physics.add.overlap(bullet, this.enemy.image, function (b, e) {
+                    if (!_this.enemy.isDeath()) {
                         mtsh.ParticlesManager.getInstance().explosion(mtsh.CONST.PARTICLES_COUNT.EXPLOSION, bullet.x, bullet.y);
                         bullet.hit();
-                        enemy.hit();
-                    }, undefined, scene);
-                });
+                        _this.enemy.hit();
+                        if (_this.enemy.isDeath()) {
+                            _this._playerState = mtsh.PLAYER_STATE.WIN;
+                        }
+                    }
+                }, undefined, scene);
             };
             ObjectManager.prototype.colliderPlayerToEnemy = function (p) {
                 this.hitPlayer(p);
             };
             ObjectManager.prototype.hitPlayer = function (p) {
-                var scene = mtsh.GameManager.getInstance().gameScene;
-                var create = function () {
-                    var offset = 80;
-                    var x = p.x + (Math.random() - 0.5) * offset;
-                    var y = p.y + (Math.random() - 0.5) * offset;
-                    mtsh.ParticlesManager.getInstance().playerDeath(mtsh.CONST.PARTICLES_COUNT.PLAYER_DEATH, x, y);
-                };
-                create();
-                this.playerDeathTimer = scene.time.addEvent({
-                    loop: true,
-                    delay: mtsh.CONST.PLAYER.DEATH_EXPLOSION_INTERVAL,
-                    callback: function () {
-                        create();
-                    }
-                });
+                if (this._playerState === mtsh.PLAYER_STATE.PLAY) {
+                    var scene = mtsh.GameManager.getInstance().gameScene;
+                    var create_1 = function () {
+                        var offset = 80;
+                        var x = p.x + (Math.random() - 0.5) * offset;
+                        var y = p.y + (Math.random() - 0.5) * offset;
+                        mtsh.ParticlesManager.getInstance().playerDeath(mtsh.CONST.PARTICLES_COUNT.PLAYER_DEATH, x, y);
+                    };
+                    create_1();
+                    this.playerDeathTimer = scene.time.addEvent({
+                        loop: true,
+                        delay: mtsh.CONST.PLAYER.DEATH_EXPLOSION_INTERVAL,
+                        callback: function () {
+                            create_1();
+                        }
+                    });
+                    this._playerState = mtsh.PLAYER_STATE.DEATH;
+                }
+            };
+            ObjectManager.prototype.isGameEnd = function () {
+                return this._playerState === mtsh.PLAYER_STATE.WIN || this._playerState === mtsh.PLAYER_STATE.DEATH;
+            };
+            ObjectManager.prototype.isWin = function () {
+                return this._playerState === mtsh.PLAYER_STATE.WIN;
             };
             return ObjectManager;
         }());
@@ -623,27 +700,26 @@ var mkg;
                 this.hpGauge = new mtsh.EnemyHpGauge(scene, this.hp, this._image.width / 2 + 10);
                 this.container = scene.add.container(x, y, [this._image, this.hpGauge.graphics]);
                 scene.physics.add.existing(this.container);
-                this.frameCounter = 0;
             }
+            Object.defineProperty(Enemy.prototype, "body", {
+                get: function () { return this.container.body; },
+                enumerable: false,
+                configurable: true
+            });
             Object.defineProperty(Enemy.prototype, "image", {
                 get: function () { return this._image; },
                 enumerable: false,
                 configurable: true
             });
             Enemy.prototype.update = function (scene) {
-                ++this.frameCounter;
-                if (this.frameCounter % 30 === 0) {
-                    var velo = mkg.util.newVector2(200, this.frameCounter * 0.5);
-                    mtsh.BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
-                        mtsh.ObjectManager.getInstance().setCollderBullet(b);
-                    });
-                }
-                this.container.body.setVelocity(100 * Math.cos(0.01 * this.frameCounter), 100 * Math.sin(0.01 * this.frameCounter));
             };
             Enemy.prototype.hit = function () {
                 if (this.hp > 0) {
                     --this.hp;
                     this.hpGauge.update(this.hp);
+                    if (this.isDeath()) {
+                        this.image.setVisible(false);
+                    }
                 }
             };
             Enemy.prototype.isDeath = function () {
@@ -756,7 +832,10 @@ var mkg;
         var GameScene = (function (_super) {
             __extends(GameScene, _super);
             function GameScene() {
-                return _super.call(this, mtsh.CONST.SCENE_KEY.GAME) || this;
+                var _this = _super.call(this, mtsh.CONST.SCENE_KEY.GAME) || this;
+                _this.majorState = mtsh.GAME_STATE.INIT;
+                _this.minorState = mtsh.MINOR_STATE.INIT;
+                return _this;
             }
             GameScene.prototype.preload = function () {
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.PLAYER, "assets/img/character_takenoko.png");
@@ -765,17 +844,67 @@ var mkg;
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BULET001, "assets/img/kinoko.png");
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.BG, "assets/img/pattern_shibafu.png");
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.SMOKE, "assets/img/bakuhatsu1.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.FILTER, "assets/img/filter.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.WIN, "assets/img/text_win.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.LOSE, "assets/img/text_lose.png");
+                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.TAP, "assets/img/text_tap.png");
             };
             GameScene.prototype.create = function () {
                 mtsh.ObjectManager.getInstance().createObjects(this);
                 this.debugText = this.add.text(10, 10, "", { color: '#333300' });
+                this.setState(mtsh.GAME_STATE.START);
+                this.setupKey();
+            };
+            GameScene.prototype.setupKey = function () {
+                var _this = this;
+                var keyObj = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                keyObj.on("up", function () {
+                    if (!!_this.nextKeyCallback) {
+                        _this.nextKeyCallback();
+                    }
+                });
             };
             GameScene.prototype.update = function () {
-                mtsh.ObjectManager.getInstance().update(this);
+                var _this = this;
                 this.debugText.setText([
                     "FPS : " + mtsh.GameManager.getInstance().game.loop.actualFps,
                     "Bullet size : " + mtsh.BulletManager.getInstance().listSize()
                 ]);
+                switch (this.majorState) {
+                    case mtsh.GAME_STATE.START:
+                        this.checkStateInit(function () {
+                            mtsh.ObjectManager.getInstance().startPhaseInit(_this, function () {
+                                _this.setState(mtsh.GAME_STATE.PLAY);
+                            });
+                        });
+                        mtsh.ObjectManager.getInstance().startPhase(this);
+                        break;
+                    case mtsh.GAME_STATE.PLAY:
+                        this.checkStateInit(function () {
+                            mtsh.ObjectManager.getInstance().playPhaseInit(_this);
+                        });
+                        mtsh.ObjectManager.getInstance().playPhase(this, function () {
+                            _this.setState(mtsh.GAME_STATE.END);
+                        });
+                        break;
+                    case mtsh.GAME_STATE.END:
+                        this.checkStateInit(function () {
+                            mtsh.ObjectManager.getInstance().endPhaseInit(_this);
+                        });
+                        mtsh.ObjectManager.getInstance().endPhase(this);
+                        break;
+                }
+            };
+            GameScene.prototype.setState = function (state) {
+                console.log("=====setState: " + state);
+                this.majorState = state;
+                this.minorState = mtsh.MINOR_STATE.INIT;
+            };
+            GameScene.prototype.checkStateInit = function (callback) {
+                if (this.minorState === mtsh.MINOR_STATE.INIT) {
+                    this.minorState = mtsh.MINOR_STATE.WAIT;
+                    callback();
+                }
             };
             return GameScene;
         }(Phaser.Scene));
