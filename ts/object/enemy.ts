@@ -60,5 +60,8 @@ namespace mkg.mtsh {
 			this.hpGauge.destroy();
 			this.container.destroy(true);
 		}
+
+		public stop() {
+		}
 	}
 }

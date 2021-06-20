@@ -92,5 +92,10 @@ namespace mkg.mtsh {
 				});
 			});
 		}
+
+		public stop() {
+			this.setVelocity(0, 0);
+			this.stopShot();
+		}
 	}
 }

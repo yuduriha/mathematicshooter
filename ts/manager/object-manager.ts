@@ -137,6 +137,9 @@ namespace mkg.mtsh {
 			//this.update(scene);
 			var label = scene.add.image(CONST.SCREEN_CENTER.x, CONST.SCREEN_CENTER.y, this.isWin() ? CONST.RESOURCE_KEY.IMG.WIN : CONST.RESOURCE_KEY.IMG.LOSE);
 			label.setOrigin(0.5, 0.5);
+
+			this._player.stop();
+			this.enemy.stop();
 		}
 
 		/**

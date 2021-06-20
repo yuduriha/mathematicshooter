@@ -129,6 +129,15 @@ var mkg;
                 EXPLOSION: 26,
                 PLAYER_DEATH: 64
             };
+            CONST.UI_CAMERA = {
+                x: 10000,
+                y: 0,
+            };
+            CONST.DEPTH = {
+                GAME_OBJ: 0,
+                TRANSITION: 200
+            };
+            CONST.TRANSITON_IMG_SIZE = 64;
             return CONST;
         }());
         mtsh.CONST = CONST;
@@ -163,9 +172,7 @@ var mkg;
                 },
                 physics: {
                     default: 'arcade',
-                    arcade: {
-                        debug: true
-                    }
+                    arcade: {}
                 },
                 scene: [
                     mtsh.PreloadScene,
@@ -489,6 +496,8 @@ var mkg;
             ObjectManager.prototype.endPhaseInit = function (scene) {
                 var label = scene.add.image(mtsh.CONST.SCREEN_CENTER.x, mtsh.CONST.SCREEN_CENTER.y, this.isWin() ? mtsh.CONST.RESOURCE_KEY.IMG.WIN : mtsh.CONST.RESOURCE_KEY.IMG.LOSE);
                 label.setOrigin(0.5, 0.5);
+                this._player.stop();
+                this.enemy.stop();
             };
             ObjectManager.prototype.endPhase = function (scene) {
                 this.update(scene);
@@ -613,6 +622,112 @@ var mkg;
 (function (mkg) {
     var mtsh;
     (function (mtsh) {
+        var TWEEN_PARAM = {
+            0: 700,
+            1: 1000,
+            2: 50,
+            3: 500
+        };
+        var TransitionManager = (function () {
+            function TransitionManager() {
+            }
+            Object.defineProperty(TransitionManager.prototype, "parent", {
+                get: function () { return this._parent; },
+                enumerable: false,
+                configurable: true
+            });
+            TransitionManager.getInstance = function () {
+                if (!TransitionManager.instance) {
+                    TransitionManager.instance = new TransitionManager();
+                }
+                return TransitionManager.instance;
+            };
+            TransitionManager.prototype.init = function (scene, texture, x, y, size, sw, sh, depth) {
+                this.col = Math.ceil(sw / size) + 1;
+                this.row = Math.ceil(sh / size) + 1;
+                this._parent = scene.add.group();
+                this.imgList = [];
+                for (var j = 0; j < this.row; ++j) {
+                    this.imgList[j] = [];
+                    for (var i = 0; i < this.col; ++i) {
+                        var img = scene.add.image(0, 0, texture);
+                        img.setOrigin(0.5);
+                        if (i === 0 && j === 0) {
+                            this.scaleX = size / img.width;
+                            this.scaleY = size / img.height;
+                        }
+                        img.setScale(this.scaleX, this.scaleY);
+                        this._parent.add(img);
+                        this.imgList[j][i] = img;
+                        img.setPosition(this.scaleX * img.width * (i + 0.5), this.scaleY * img.height * (j + 0.5));
+                    }
+                }
+                this._parent.setDepth(depth);
+                this._parent.incXY(x, y);
+            };
+            TransitionManager.prototype.destroy = function () {
+                this.imgList = [];
+                this._parent.destroy(true);
+            };
+            TransitionManager.prototype.playClose = function (scene, complete) {
+                this._parent.setVisible(true);
+                for (var j = 0; j < this.row; ++j) {
+                    for (var i = 0; i < this.col; ++i) {
+                        this.imgList[j][i].scale = 0;
+                        this.imgList[j][i].angle = 0;
+                        var config = this.creatTweenConfg(this.imgList[j][i], i, j, this.scaleX, this.scaleY);
+                        scene.tweens.add(config);
+                    }
+                }
+                var interval = this.getInterval(this.col, this.row);
+                window.setTimeout(function () {
+                    complete();
+                }, interval);
+            };
+            TransitionManager.prototype.playOpen = function (scene, complete, completeIntervalRate) {
+                var _this = this;
+                if (completeIntervalRate === void 0) { completeIntervalRate = 1; }
+                this._parent.setVisible(true);
+                for (var j = 0; j < this.row; ++j) {
+                    for (var i = 0; i < this.col; ++i) {
+                        this.imgList[j][i].setScale(this.scaleX, this.scaleY);
+                        this.imgList[j][i].angle = 0;
+                        var config = this.creatTweenConfg(this.imgList[j][i], this.col - i - 1, this.row - j - 1, 0, 0);
+                        scene.tweens.add(config);
+                    }
+                }
+                var interval = this.getInterval(this.col, this.row);
+                window.setTimeout(function () {
+                    _this._parent.setVisible(false);
+                }, interval);
+                window.setTimeout(function () {
+                    complete();
+                }, interval * completeIntervalRate);
+            };
+            TransitionManager.prototype.creatTweenConfg = function (target, i, j, scaleX, scaleY) {
+                var l = (i % 2) == (j % 2);
+                return {
+                    targets: target,
+                    scaleX: scaleX,
+                    scaleY: scaleY,
+                    angle: l ? 180 : -180,
+                    duration: l ? TWEEN_PARAM[0] : TWEEN_PARAM[1],
+                    delay: (i + j) * TWEEN_PARAM[2] + (l ? 0 : TWEEN_PARAM[3]),
+                    repeat: 0,
+                };
+            };
+            TransitionManager.prototype.getInterval = function (i, j) {
+                return TWEEN_PARAM[1] + (i + j) * TWEEN_PARAM[2] + TWEEN_PARAM[3];
+            };
+            return TransitionManager;
+        }());
+        mtsh.TransitionManager = TransitionManager;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
         var Bg = (function () {
             function Bg() {
                 this.bgList = [];
@@ -730,6 +845,8 @@ var mkg;
                 this.hpGauge.destroy();
                 this.container.destroy(true);
             };
+            Enemy.prototype.stop = function () {
+            };
             return Enemy;
         }());
         mtsh.Enemy = Enemy;
@@ -820,6 +937,10 @@ var mkg;
                     });
                 });
             };
+            Player.prototype.stop = function () {
+                this.setVelocity(0, 0);
+                this.stopShot();
+            };
             return Player;
         }(Phaser.Physics.Arcade.Image));
         mtsh.Player = Player;
@@ -847,21 +968,35 @@ var mkg;
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.FILTER, "assets/img/filter.png");
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.WIN, "assets/img/text_win.png");
                 this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.LOSE, "assets/img/text_lose.png");
-                this.load.image(mtsh.CONST.RESOURCE_KEY.IMG.TAP, "assets/img/text_tap.png");
             };
             GameScene.prototype.create = function () {
+                var _this = this;
                 mtsh.ObjectManager.getInstance().createObjects(this);
                 this.debugText = this.add.text(10, 10, "", { color: '#333300' });
-                this.setState(mtsh.GAME_STATE.START);
+                mtsh.TransitionManager.getInstance().init(this, mtsh.CONST.RESOURCE_KEY.IMG.FILTER, mtsh.CONST.UI_CAMERA.x, mtsh.CONST.UI_CAMERA.y, mtsh.CONST.TRANSITON_IMG_SIZE, mtsh.CONST.SCREEN.width, mtsh.CONST.SCREEN.height, mtsh.CONST.DEPTH.TRANSITION);
+                this.cameras.main.ignore(mtsh.TransitionManager.getInstance().parent);
+                this.uiCamera = this.cameras.add(0, 0, mtsh.CONST.SCREEN.width, mtsh.CONST.SCREEN.height);
+                this.uiCamera.setScroll(mtsh.CONST.UI_CAMERA.x, mtsh.CONST.UI_CAMERA.y);
+                mtsh.TransitionManager.getInstance().playOpen(this, function () {
+                    _this.setState(mtsh.GAME_STATE.START);
+                }, 0.3);
                 this.setupKey();
             };
             GameScene.prototype.setupKey = function () {
                 var _this = this;
-                var keyObj = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
-                keyObj.on("up", function () {
+                var onKey = function () {
                     if (!!_this.nextKeyCallback) {
                         _this.nextKeyCallback();
+                        _this.nextKeyCallback = undefined;
                     }
+                };
+                var keyObj = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+                var keyObjEnter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
+                keyObj.on("up", function () {
+                    onKey();
+                });
+                keyObjEnter.on("up", function () {
+                    onKey();
                 });
             };
             GameScene.prototype.update = function () {
@@ -890,13 +1025,18 @@ var mkg;
                     case mtsh.GAME_STATE.END:
                         this.checkStateInit(function () {
                             mtsh.ObjectManager.getInstance().endPhaseInit(_this);
+                            _this.nextKeyCallback = function () {
+                                mtsh.TransitionManager.getInstance().playClose(_this, function () {
+                                    _this.removeGameScene();
+                                    _this.scene.start(mtsh.CONST.SCENE_KEY.GAME);
+                                });
+                            };
                         });
                         mtsh.ObjectManager.getInstance().endPhase(this);
                         break;
                 }
             };
             GameScene.prototype.setState = function (state) {
-                console.log("=====setState: " + state);
                 this.majorState = state;
                 this.minorState = mtsh.MINOR_STATE.INIT;
             };
@@ -905,6 +1045,15 @@ var mkg;
                     this.minorState = mtsh.MINOR_STATE.WAIT;
                     callback();
                 }
+            };
+            GameScene.prototype.removeGameScene = function () {
+                this.destroyObject();
+                mtsh.ParticlesManager.getInstance().destroy();
+                mtsh.TransitionManager.getInstance().destroy();
+            };
+            GameScene.prototype.destroyObject = function () {
+                mtsh.ObjectManager.getInstance().destroyObjects();
+                this.physics.world.colliders.destroy();
             };
             return GameScene;
         }(Phaser.Scene));

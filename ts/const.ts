@@ -149,5 +149,20 @@ namespace mkg.mtsh {
 			EXPLOSION: 26,
 			PLAYER_DEATH:64
 		};
+
+		static readonly UI_CAMERA = {
+			x: 10000,
+			y: 0,
+		};
+
+		/**
+		 * 描画順
+		 */
+		static readonly DEPTH = {
+			GAME_OBJ: 0,
+			TRANSITION: 200
+		}
+
+		static readonly TRANSITON_IMG_SIZE = 64;
 	}
 }
