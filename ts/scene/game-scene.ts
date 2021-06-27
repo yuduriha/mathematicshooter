@@ -5,14 +5,18 @@ namespace mkg.mtsh {
 		private minorState: MINOR_STATE = MINOR_STATE.INIT;
 		private uiCamera!: Phaser.Cameras.Scene2D.Camera;
 		private cursorTimer: Phaser.Time.TimerEvent | null;
+		private isDownOld: boolean;
 		private nextKeyCallback?: () => void;
 		constructor() {
 			super(CONST.SCENE_KEY.GAME);
-			this.cursorTimer = null;;
+			this.cursorTimer = null;
+			this.isDownOld = false;
 		}
 		preload() {
 		}
 		create() {
+			this.isDownOld = false;
+
 			ObjectManager.getInstance().createObjects(this);
 
 			this.debugText = this.add.text(10, 10, "", {color: '#333300'});
@@ -69,33 +73,46 @@ namespace mkg.mtsh {
 			}
 		}
 
-		setupKey() {
-			var onKey = () => {
-				if(!!this.nextKeyCallback) {
-					this.nextKeyCallback();
-					// 一回実行したら消す
-					this.nextKeyCallback = undefined;
-				}
-			}
-
+		private setupKey() {
 			// TODO とりあえずスペースキー押下したら、次に進める
 			let keyObj = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
 			let keyObjEnter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
 
 			keyObj.on("up", () => {
-				onKey();
+				this.onNextkey();
 			});
 			keyObjEnter.on("up", () => {
-				onKey();
+				this.onNextkey();
 			});
 		}
 
+		/**
+		 * 次へ進むボタン押下
+		 */
+		private onNextkey() {
+			if(!!this.nextKeyCallback) {
+				this.nextKeyCallback();
+				// 一回実行したら消す
+				this.nextKeyCallback = undefined;
+			}
+		}
+
 		update() {
+			let pointer = this.input.activePointer;
+			let player = ObjectManager.getInstance().player;
+
+// 			: pointer.downX, pointer.downY
+// Touching end : pointer.upX, pointer.upY
 			this.debugText.setText([
 				"FPS : " + GameManager.getInstance().game.loop.actualFps,
 				"version : " + GameManager.getInstance().config.version,
-				"Bullet size : " + BulletManager.getInstance().listSize()
+				"Bullet size : " + BulletManager.getInstance().listSize(),
+				"pointer: (" + Math.floor(pointer.x) + ", " + Math.floor(pointer.y) + ")",
+				"delta: (" + pointer.deltaX + ", " + pointer.deltaY + ")",
+				"DD angle : " + pointer.getAngle(),
+				"isDown : " + pointer.isDown,
+				"player : (" +　player.x + ", " + player.y + ")",
 			]);
 
 			switch(this.majorState) {
@@ -132,6 +149,13 @@ namespace mkg.mtsh {
 					ObjectManager.getInstance().endPhase(this);
 					break;
 			}
+
+			// ポインターを離した瞬間か
+			if(!pointer.isDown && this.isDownOld) {
+				this.onNextkey();
+			}
+
+			this.isDownOld = pointer.isDown;
 		}
 
 		private setState(state: GAME_STATE) {

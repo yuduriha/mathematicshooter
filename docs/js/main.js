@@ -967,6 +967,8 @@ var mkg;
             __extends(Player, _super);
             function Player(scene, x, y, texture, frame) {
                 var _this = _super.call(this, scene, x, y, texture, frame) || this;
+                _this.isDownOld = false;
+                _this.posTapOld = { x: 0, y: 0 };
                 scene.add.existing(_this);
                 scene.physics.add.existing(_this);
                 _this.setOrigin(0.5);
@@ -976,7 +978,25 @@ var mkg;
                 return _this;
             }
             Player.prototype.update = function (scene) {
-                var cursors = scene.input.keyboard.createCursorKeys();
+                var pointer = scene.input.activePointer;
+                var resultKeyboard = this.moveKeyboard(scene.input.keyboard.createCursorKeys());
+                var resultPointer = this.movePointer(pointer);
+                var result = { vx: 0, vy: 0, isMove: false };
+                if (resultKeyboard.isMove) {
+                    result = resultKeyboard;
+                }
+                else if (resultPointer.isMove) {
+                    result = resultPointer;
+                }
+                this.isDownOld = pointer.isDown;
+                if (!result.isMove) {
+                    this.setVelocity(0, 0);
+                    return;
+                }
+                var angle = Phaser.Math.RadToDeg(Math.atan2(result.vy, result.vx));
+                this.updateVelo(angle);
+            };
+            Player.prototype.moveKeyboard = function (cursors) {
                 var isPress = false;
                 var targetVec = { x: 0, y: 0 };
                 if (cursors.left && cursors.left.isDown) {
@@ -995,12 +1015,41 @@ var mkg;
                     isPress = true;
                     targetVec.y = 1;
                 }
-                if (!isPress) {
-                    this.setVelocity(0, 0);
-                    return;
+                return {
+                    vx: targetVec.x,
+                    vy: targetVec.y,
+                    isMove: isPress
+                };
+            };
+            Player.prototype.movePointer = function (pointer) {
+                var defaultResult = {
+                    vx: 0,
+                    vy: 0,
+                    isMove: false
+                };
+                if (!pointer.isDown) {
+                    return defaultResult;
                 }
-                var angle = Phaser.Math.RadToDeg(Math.atan2(targetVec.y, targetVec.x));
-                this.updateVelo(angle);
+                if (!this.isDownOld) {
+                    this.posTapOld.x = pointer.x;
+                    this.posTapOld.y = pointer.y;
+                    return defaultResult;
+                }
+                var targetVec = { x: 0, y: 0 };
+                targetVec.x = pointer.x - this.posTapOld.x;
+                targetVec.y = pointer.y - this.posTapOld.y;
+                this.posTapOld.x = pointer.x;
+                this.posTapOld.y = pointer.y;
+                var d = targetVec.x * targetVec.x + targetVec.y * targetVec.y;
+                var LIMIT = 0.1;
+                if (d < LIMIT) {
+                    return defaultResult;
+                }
+                return {
+                    vx: targetVec.x,
+                    vy: targetVec.y,
+                    isMove: true
+                };
             };
             Player.prototype.updateVelo = function (angle) {
                 var velo = mkg.util.polarCoord(0, 0, mtsh.CONST.PLAYER.SPEED, angle);
@@ -1064,13 +1113,14 @@ var mkg;
                 _this.majorState = mtsh.GAME_STATE.INIT;
                 _this.minorState = mtsh.MINOR_STATE.INIT;
                 _this.cursorTimer = null;
-                ;
+                _this.isDownOld = false;
                 return _this;
             }
             GameScene.prototype.preload = function () {
             };
             GameScene.prototype.create = function () {
                 var _this = this;
+                this.isDownOld = false;
                 mtsh.ObjectManager.getInstance().createObjects(this);
                 this.debugText = this.add.text(10, 10, "", { color: '#333300' });
                 mtsh.TransitionManager.getInstance().init(this, mtsh.CONST.RESOURCE_KEY.IMG.FILTER, mtsh.CONST.UI_CAMERA.x, mtsh.CONST.UI_CAMERA.y, mtsh.CONST.TRANSITON_IMG_SIZE, mtsh.CONST.SCREEN.width, mtsh.CONST.SCREEN.height, mtsh.CONST.DEPTH.TRANSITION);
@@ -1113,27 +1163,34 @@ var mkg;
             };
             GameScene.prototype.setupKey = function () {
                 var _this = this;
-                var onKey = function () {
-                    if (!!_this.nextKeyCallback) {
-                        _this.nextKeyCallback();
-                        _this.nextKeyCallback = undefined;
-                    }
-                };
                 var keyObj = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
                 var keyObjEnter = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER);
                 keyObj.on("up", function () {
-                    onKey();
+                    _this.onNextkey();
                 });
                 keyObjEnter.on("up", function () {
-                    onKey();
+                    _this.onNextkey();
                 });
+            };
+            GameScene.prototype.onNextkey = function () {
+                if (!!this.nextKeyCallback) {
+                    this.nextKeyCallback();
+                    this.nextKeyCallback = undefined;
+                }
             };
             GameScene.prototype.update = function () {
                 var _this = this;
+                var pointer = this.input.activePointer;
+                var player = mtsh.ObjectManager.getInstance().player;
                 this.debugText.setText([
                     "FPS : " + mtsh.GameManager.getInstance().game.loop.actualFps,
                     "version : " + mtsh.GameManager.getInstance().config.version,
-                    "Bullet size : " + mtsh.BulletManager.getInstance().listSize()
+                    "Bullet size : " + mtsh.BulletManager.getInstance().listSize(),
+                    "pointer: (" + Math.floor(pointer.x) + ", " + Math.floor(pointer.y) + ")",
+                    "delta: (" + pointer.deltaX + ", " + pointer.deltaY + ")",
+                    "DD angle : " + pointer.getAngle(),
+                    "isDown : " + pointer.isDown,
+                    "player : (" + player.x + ", " + player.y + ")",
                 ]);
                 switch (this.majorState) {
                     case mtsh.GAME_STATE.START:
@@ -1165,6 +1222,10 @@ var mkg;
                         mtsh.ObjectManager.getInstance().endPhase(this);
                         break;
                 }
+                if (!pointer.isDown && this.isDownOld) {
+                    this.onNextkey();
+                }
+                this.isDownOld = pointer.isDown;
             };
             GameScene.prototype.setState = function (state) {
                 this.majorState = state;
