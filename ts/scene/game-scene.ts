@@ -102,8 +102,9 @@ namespace mkg.mtsh {
 			let pointer = this.input.activePointer;
 			let player = ObjectManager.getInstance().player;
 
-// 			: pointer.downX, pointer.downY
-// Touching end : pointer.upX, pointer.upY
+			// PCChrome スマホ偽装だと動かないけどモバイルサファリだと動くな...
+//			let pointer = this.input.pointer1;
+
 			this.debugText.setText([
 				"FPS : " + GameManager.getInstance().game.loop.actualFps,
 				"version : " + GameManager.getInstance().config.version,

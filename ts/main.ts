@@ -27,6 +27,9 @@ namespace mkg.mtsh {
 			],
 			fps: {
 				target: 60
+			},
+			input: {
+				activePointers: 1
 			}
 		};
 		let game = new Phaser.Game(config);
