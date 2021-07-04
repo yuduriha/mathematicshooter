@@ -347,9 +347,15 @@ var mkg;
                 });
                 this.bulletList = [];
             };
-            BulletManager.prototype.createBullet = function (scene, img) {
+            BulletManager.prototype.createBullet = function (scene, type, img) {
                 var _this = this;
-                var bullet = new mtsh.Bullet(scene, img, function () {
+                var newBullet = mtsh.Bullet;
+                switch (type) {
+                    case 1:
+                        newBullet = mtsh.Bullet001;
+                        break;
+                }
+                var bullet = new newBullet(scene, img, function () {
                     bullet.destroy(true);
                     _this.bulletList = _this.bulletList.filter(function (b) {
                         return b != bullet;
@@ -358,10 +364,10 @@ var mkg;
                 this.bulletList.push(bullet);
                 return bullet;
             };
-            BulletManager.prototype.use = function (x, y, vx, vy, img, setCollider) {
-                var bullet = this.createBullet(mtsh.GameManager.getInstance().gameScene, img);
+            BulletManager.prototype.use = function (x, y, vx, vy, param, img, setCollider) {
+                var bullet = this.createBullet(mtsh.GameManager.getInstance().gameScene, param.type || 0, img);
                 setCollider(bullet);
-                bullet.use(x, y, vx, vy);
+                bullet.use(x, y, vx, vy, param);
             };
             BulletManager.prototype.listSize = function () {
                 return this.bulletList.length;
@@ -788,7 +794,7 @@ var mkg;
                 _this.setVisible(false);
                 return _this;
             }
-            Bullet.prototype.use = function (x, y, vx, vy) {
+            Bullet.prototype.use = function (x, y, vx, vy, param) {
                 this.setActive(true);
                 this.setVisible(true);
                 this.setPosition(x, y);
@@ -813,12 +819,35 @@ var mkg;
 (function (mkg) {
     var mtsh;
     (function (mtsh) {
+        var Bullet001 = (function (_super) {
+            __extends(Bullet001, _super);
+            function Bullet001() {
+                return _super !== null && _super.apply(this, arguments) || this;
+            }
+            Bullet001.prototype.use = function (x, y, vx, vy, param) {
+            };
+            Bullet001.prototype.update = function () {
+                this.angle = Phaser.Math.RadToDeg(this.velo.angle()) + mtsh.CONST.BULLET.DEFO_ANGLE;
+            };
+            Bullet001.prototype.isDestroyOutside = function () {
+                return false;
+            };
+            return Bullet001;
+        }(mtsh.Bullet));
+        mtsh.Bullet001 = Bullet001;
+    })(mtsh = mkg.mtsh || (mkg.mtsh = {}));
+})(mkg || (mkg = {}));
+var mkg;
+(function (mkg) {
+    var mtsh;
+    (function (mtsh) {
         var Enemy = (function () {
             function Enemy(scene, x, y, texture, setting) {
                 this.setting = setting;
                 this.moveStep = 0;
                 this.moveTween = undefined;
                 this.shotStep = 0;
+                this.shotRepeatCnt = 0;
                 this.shotDurationTimer = undefined;
                 this.shotIntervalTimer = undefined;
                 this._image = new Phaser.Physics.Arcade.Image(scene, 0, 0, texture);
@@ -881,22 +910,36 @@ var mkg;
             Enemy.prototype.dispatchShotTimer = function (scene) {
                 var step = this.setting.shot_pattern.length > this.shotStep ? this.shotStep : this.setting.shot_pattern.length - 1;
                 var pattern = this.setting.shot_pattern[step];
-                this.addShotTimer(scene, pattern.duration, pattern.interval, pattern.type, pattern.parame);
+                this.addShotTimer(scene, pattern.duration, pattern.interval, pattern.parame || { type: 0 }, pattern.bullet);
             };
-            Enemy.prototype.addShotTimer = function (scene, duration, interval, type, parame) {
+            Enemy.prototype.addShotTimer = function (scene, duration, interval, shotParame, bulletParame) {
                 var _this = this;
-                this.setShotInterval(scene, interval, type, parame);
+                this.setShotInterval(scene, interval, shotParame, bulletParame);
                 this.shotDurationTimer = scene.time.addEvent({ delay: duration, callback: function () {
-                        ++_this.shotStep;
+                        if (shotParame.repeat) {
+                            ++_this.shotRepeatCnt;
+                            if (_this.shotRepeatCnt < shotParame.repeat.count) {
+                                _this.shotStep -= shotParame.repeat.back_step;
+                            }
+                            else {
+                                _this.shotRepeatCnt = 0;
+                                ++_this.shotStep;
+                            }
+                        }
+                        else {
+                            ++_this.shotStep;
+                        }
                         _this.dispatchShotTimer(scene);
                     } });
             };
-            Enemy.prototype.setShotInterval = function (scene, interval, type, parame) {
+            Enemy.prototype.setShotInterval = function (scene, interval, parame, bulletParame) {
                 var _this = this;
                 this.stopShotInterval();
-                this.shotIntervalTimer = scene.time.addEvent({ delay: interval, loop: true, callback: function () {
-                        _this.shot(scene, type, parame);
-                    } });
+                if (interval > 0) {
+                    this.shotIntervalTimer = scene.time.addEvent({ delay: interval, loop: true, callback: function () {
+                            _this.shot(scene, parame, bulletParame);
+                        } });
+                }
             };
             Enemy.prototype.stopShotInterval = function () {
                 if (this.shotIntervalTimer) {
@@ -905,23 +948,30 @@ var mkg;
                     this.shotIntervalTimer = undefined;
                 }
             };
-            Enemy.prototype.shot = function (scene, type, parame) {
-                switch (type) {
+            Enemy.prototype.shot = function (scene, shorParame, bulletParame) {
+                switch (shorParame.type) {
                     case 0:
                         break;
                     case 1:
-                        this.shotPattern1(scene, parame);
+                        this.shotPattern1(scene, shorParame, bulletParame);
                         break;
                 }
             };
-            Enemy.prototype.shotPattern1 = function (scene, parame) {
-                if (!parame || !parame.velo || !parame.angle_rate || !this.shotDurationTimer) {
+            Enemy.prototype.shotPattern1 = function (scene, shorParame, bulletParame) {
+                if (!this.shotDurationTimer) {
                     return;
                 }
-                var velo = mkg.util.newVector2(parame.velo, this.shotDurationTimer.getProgress() * parame.angle_rate);
-                mtsh.BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
-                    mtsh.ObjectManager.getInstance().setCollderBullet(b);
-                });
+                var num = shorParame.shot_count || 1;
+                var step = shorParame.angle_step || 0;
+                var repeatDelta = this.shotRepeatCnt * (shorParame.angle_repeat_delta || 0);
+                for (var cnt = 0; cnt < num; ++cnt) {
+                    var delta = cnt * step + repeatDelta;
+                    var angle = this.shotDurationTimer.getProgress() * (shorParame.angle_rate || 0) + (shorParame.angle_start || 0) + delta;
+                    var velo = mkg.util.newVector2((bulletParame.velo || 0), angle);
+                    mtsh.BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, bulletParame, mtsh.CONST.RESOURCE_KEY.IMG.BULET001, function (b) {
+                        mtsh.ObjectManager.getInstance().setCollderBullet(b);
+                    });
+                }
             };
             Enemy.prototype.hit = function () {
                 if (this.hp > 0) {
@@ -1088,7 +1138,7 @@ var mkg;
             Player.prototype.shot = function () {
                 var _this = this;
                 mtsh.CONST.PLAYER.BULLET.SHOT_OFFSET.forEach(function (pos) {
-                    mtsh.BulletManager.getInstance().use(_this.x + pos.x, _this.y + pos.y, 0, mtsh.CONST.PLAYER.BULLET.SPEED, mtsh.CONST.RESOURCE_KEY.IMG.BULET000, function (b) {
+                    mtsh.BulletManager.getInstance().use(_this.x + pos.x, _this.y + pos.y, 0, mtsh.CONST.PLAYER.BULLET.SPEED, {}, mtsh.CONST.RESOURCE_KEY.IMG.BULET000, function (b) {
                         mtsh.ObjectManager.getInstance().setCollderPlayerBullet(b);
                     });
                 });

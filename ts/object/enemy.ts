@@ -8,6 +8,7 @@ namespace mkg.mtsh {
 		private moveStep: number; // 行動段階
 		private moveTween?: Phaser.Tweens.Tween;
 		private shotStep: number; // 弾発射段階
+		private shotRepeatCnt: number; // 弾発射段階繰り返し
 		private shotDurationTimer?: Phaser.Time.TimerEvent;
 		private shotIntervalTimer?: Phaser.Time.TimerEvent;
 		public get body() {return <Phaser.Physics.Arcade.Body>this.container.body;}
@@ -17,6 +18,7 @@ namespace mkg.mtsh {
 			this.moveStep = 0;
 			this.moveTween = undefined;
 			this.shotStep = 0;
+			this.shotRepeatCnt = 0;
 			this.shotDurationTimer = undefined;
 			this.shotIntervalTimer = undefined;
 
@@ -85,16 +87,29 @@ namespace mkg.mtsh {
 
 			let pattern = this.setting.shot_pattern[step];
 
-			this.addShotTimer(scene, pattern.duration, pattern.interval, pattern.type, pattern.parame);
+			this.addShotTimer(scene, pattern.duration, pattern.interval, pattern.parame || {type: 0}, pattern.bullet);
 		}
 
 		// 移動tween追加
-		private addShotTimer(scene: Phaser.Scene, duration: number, interval: number, type: number, parame?: ShotParame) {
-			this.setShotInterval(scene, interval, type, parame);
+		private addShotTimer(scene: Phaser.Scene, duration: number, interval: number, shotParame: ShotParame, bulletParame: BulletParame) {
+			this.setShotInterval(scene, interval, shotParame, bulletParame);
 
 			this.shotDurationTimer = scene.time.addEvent({delay: duration, callback: () => {
-				// 一定時間たったらステップを進める
-				++this.shotStep;
+				// 繰り返し設定
+				if(shotParame.repeat) {
+					++this.shotRepeatCnt;
+
+					if(this.shotRepeatCnt < shotParame.repeat.count) {
+						// 一定ステップ戻す
+						this.shotStep -= shotParame.repeat.back_step;
+					} else {
+						this.shotRepeatCnt = 0;
+						++this.shotStep;
+					}
+				} else {
+					// 一定時間たったらステップを進める
+					++this.shotStep;
+				}
 				this.dispatchShotTimer(scene);
 			}});
 		}
@@ -103,13 +118,15 @@ namespace mkg.mtsh {
 		 * 弾発射設定
 		 * 必ず前の発射を止める
 		 */
-		private setShotInterval(scene: Phaser.Scene, interval: number, type: number, parame?: ShotParame) {
+		private setShotInterval(scene: Phaser.Scene, interval: number, parame: ShotParame, bulletParame: BulletParame) {
 			// 一旦止めてから
 			this.stopShotInterval();
 
-			this.shotIntervalTimer = scene.time.addEvent({delay: interval, loop: true, callback: () => {
-				this.shot(scene, type, parame)
-			}});
+			if(interval > 0) {
+				this.shotIntervalTimer = scene.time.addEvent({delay: interval, loop: true, callback: () => {
+					this.shot(scene, parame, bulletParame)
+				}});
+			}
 		}
 
 		private stopShotInterval() {
@@ -120,25 +137,35 @@ namespace mkg.mtsh {
 			}
 		}
 
-		private shot(scene: Phaser.Scene, type: number, parame?: ShotParame) {
-			switch(type) {
+		private shot(scene: Phaser.Scene, shorParame: ShotParame, bulletParame: BulletParame) {
+			// 数字振っていくだけだからtypeの定数化しなくていいや
+			switch(shorParame.type) {
 				case 0: // 何もしない
 					break;
-				case 1:
-					this.shotPattern1(scene, parame);
+				case 1: // 1発ずつ撃つ
+					this.shotPattern1(scene, shorParame, bulletParame);
 					break;
 			}
 		}
 
-		private shotPattern1(scene: Phaser.Scene, parame?: ShotParame) {
-			if(!parame || !parame.velo || !parame.angle_rate || !this.shotDurationTimer) {
+		// 一定個数発射
+		private shotPattern1(scene: Phaser.Scene, shorParame: ShotParame, bulletParame: BulletParame) {
+			if(!this.shotDurationTimer) {
 				return;
 			}
 
-			let velo = util.newVector2(parame.velo, this.shotDurationTimer.getProgress() * parame.angle_rate);
-			BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, CONST.RESOURCE_KEY.IMG.BULET001, (b: Bullet) => {
-				ObjectManager.getInstance().setCollderBullet(b);
-			});
+			let num = shorParame.shot_count || 1;
+			let step = shorParame.angle_step || 0;
+			let repeatDelta = this.shotRepeatCnt * (shorParame.angle_repeat_delta || 0); // 繰り返し中のずらす角度
+
+			for(let cnt = 0; cnt < num ; ++cnt) {
+				let delta = cnt * step + repeatDelta;
+				let angle = this.shotDurationTimer.getProgress() * (shorParame.angle_rate || 0) + (shorParame.angle_start || 0) + delta;
+				let velo = util.newVector2((bulletParame.velo || 0), angle);
+				BulletManager.getInstance().use(this.container.x, this.container.y, velo.x, velo.y, bulletParame, CONST.RESOURCE_KEY.IMG.BULET001, (b: Bullet) => {
+					ObjectManager.getInstance().setCollderBullet(b);
+				});
+			}
 		}
 
 		public hit() {

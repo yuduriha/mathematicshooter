@@ -1,7 +1,7 @@
 namespace mkg.mtsh {
 	export class Bullet extends Phaser.Physics.Arcade.Image {
-		private hitCallback: () => void;
-		private velo! :Phaser.Math.Vector2;
+		protected hitCallback: () => void;
+		protected velo! :Phaser.Math.Vector2;
 		constructor(scene: Phaser.Scene, texture: string, hitCallback: () => void, frame?: string | integer) {
 			super(scene, 0, 0, texture, frame);
 			scene.add.existing(this);
@@ -16,17 +16,17 @@ namespace mkg.mtsh {
 			this.setVisible(false);
 		}
 
-		public use(x: number, y: number, vx: number,  vy: number) {
+		public use(x: number, y: number, vx: number, vy: number, param: BulletParame) {
 			this.setActive(true);
 			this.setVisible(true);
 
 			this.setPosition(x, y);
 
-			// TODO
 			this.setVelocity(vx, vy);
 
 			this.velo = new Phaser.Math.Vector2(vx, vy);
 		}
+
 		public update() {
 			this.angle = Phaser.Math.RadToDeg(this.velo.angle()) + CONST.BULLET.DEFO_ANGLE;
 		}

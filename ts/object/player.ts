@@ -160,7 +160,7 @@ namespace mkg.mtsh {
 
 		private shot() {
 			CONST.PLAYER.BULLET.SHOT_OFFSET.forEach((pos) => {
-				BulletManager.getInstance().use(this.x + pos.x, this.y + pos.y, 0, CONST.PLAYER.BULLET.SPEED, CONST.RESOURCE_KEY.IMG.BULET000, (b: Bullet) => {
+				BulletManager.getInstance().use(this.x + pos.x, this.y + pos.y, 0, CONST.PLAYER.BULLET.SPEED, {} ,CONST.RESOURCE_KEY.IMG.BULET000, (b: Bullet) => {
 					ObjectManager.getInstance().setCollderPlayerBullet(b);
 				});
 			});

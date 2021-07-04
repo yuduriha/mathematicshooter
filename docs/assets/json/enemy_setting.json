@@ -19,31 +19,60 @@
 		}
 	}],
 	"shot_pattern": [{
+		"duration": 6000
+	}, {
+		"duration": 400,
+		"interval": 100,
+		"parame": {
+			"type": 1,
+			"angle_rate": 10,
+			"angle_start": 80,
+			"angle_repeat_delta": 5
+		},
+		"bullet": {
+			"velo" : 200
+		}
+	}, {
+		"duration": 200,
+		"parame": {
+			"repeat": {
+				"back_step": 1,
+				"count": 5
+			}
+		}
+	}, {
 		"duration": 6000,
-		"type": 0
+		"interval": 500,
+		"parame": {
+			"type": 1,
+			"shot_count": 3,
+			"angle_step": 10,
+			"angle_rate": 360,
+			"angle_start": 0
+		},
+		"bullet": {
+			"velo" : 200
+		}
+	}, {
+		"duration": 400,
+		"interval": 100,
+		"parame": {
+			"type": 1,
+			"angle_rate": 10,
+			"angle_start": 80
+		},
+		"bullet": {
+			"velo" : 200
+		}
 	}, {
 		"duration": 10000,
 		"interval": 500,
-		"type": 1,
 		"parame": {
-			"velo" : 200,
+			"type": 1,
 			"angle_rate": 360
-		}
-	}, {
-		"duration": 10000,
-		"interval": 300,
-		"type": 1,
-		"parame": {
-			"velo" : 200,
-			"angle_rate": 360
-		}
-	}, {
-		"duration": 10000,
-		"interval": 200,
-		"type": 1,
-		"parame": {
-			"velo" : 200,
-			"angle_rate": -720
+		},
+		"bullet": {
+			"velo" : 200
 		}
 	}]
 }
